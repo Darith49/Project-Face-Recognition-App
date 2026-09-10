@@ -1,0 +1,57 @@
+name: face_attendance
+description: "Face Recognition Attendance App - A professional attendance management system using face recognition technology."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  
+  # State Management
+  provider: ^6.1.2
+  
+  # Local Database
+  sqflite: ^2.4.2
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  
+  # Camera & Image
+  camera: ^0.11.1
+  image: ^4.5.3
+  
+  # Face Detection (Google ML Kit)
+  google_mlkit_face_detection: ^0.12.0
+  
+  # UI Components
+  fl_chart: ^0.70.2
+  intl: ^0.20.2
+  google_fonts: ^6.2.1
+  animate_do: ^3.3.4
+  shimmer: ^3.0.0
+  
+  # Location
+  geolocator: ^13.0.2
+  
+  # Utilities
+  uuid: ^4.5.1
+  shared_preferences: ^2.3.5
+  crypto: ^3.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
