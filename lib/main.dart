@@ -72,21 +72,35 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _slideAnimation = Tween<double>(begin: 20, end: 0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
+      ),
     );
 
     _controller.forward();
@@ -103,7 +117,7 @@ class _SplashScreenState extends State<SplashScreen>
     final authProvider = context.read<AuthProvider>();
     await authProvider.init();
 
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(milliseconds: 1500));
 
     if (mounted) {
       Navigator.of(context).pushReplacement(
@@ -113,7 +127,7 @@ class _SplashScreenState extends State<SplashScreen>
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 800),
+          transitionDuration: const Duration(milliseconds: 600),
         ),
       );
     }
@@ -134,59 +148,78 @@ class _SplashScreenState extends State<SplashScreen>
                 opacity: _fadeAnimation.value,
                 child: Transform.scale(
                   scale: _scaleAnimation.value,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryColor.withValues(alpha: 0.4),
-                              blurRadius: 40,
-                              offset: const Offset(0, 15),
-                            ),
-                          ],
+                  child: Transform.translate(
+                    offset: Offset(0, _slideAnimation.value),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // App icon
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(26),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryColor
+                                    .withValues(alpha: 0.3),
+                                blurRadius: 24,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.face_retouching_natural_rounded,
+                            color: Colors.white,
+                            size: 44,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.face_retouching_natural_rounded,
-                          color: Colors.white,
-                          size: 52,
+                        const SizedBox(height: 28),
+                        // App name
+                        const Text(
+                          'FaceAttend',
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 1.5,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'FaceAttend',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 2,
+                        const SizedBox(height: 8),
+                        Text(
+                          'SMART ATTENDANCE SYSTEM',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary.withValues(alpha: 0.7),
+                            letterSpacing: 3,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Smart Attendance System',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.textSecondary,
-                          letterSpacing: 3,
-                          fontWeight: FontWeight.w400,
+                        const SizedBox(height: 56),
+                        // Loading indicator — slim and elegant
+                        SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            color:
+                                AppTheme.primaryColor.withValues(alpha: 0.5),
+                            strokeWidth: 2,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 48),
-                      SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: CircularProgressIndicator(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.6),
-                          strokeWidth: 2.5,
+                        const SizedBox(height: 80),
+                        // Version
+                        Text(
+                          'v1.0.0',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color:
+                                AppTheme.textTertiary.withValues(alpha: 0.5),
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );

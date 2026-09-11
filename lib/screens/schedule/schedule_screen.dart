@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/schedule_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/schedule_model.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/empty_state.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -17,7 +18,15 @@ class ScheduleScreen extends StatefulWidget {
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
   String _selectedDay = '';
-  final _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  final _days = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+  ];
 
   @override
   void initState() {
@@ -41,6 +50,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             children: [
               _buildAppBar(),
               _buildDaySelector(),
+              const SizedBox(height: 6),
               Expanded(child: _buildScheduleList()),
             ],
           ),
@@ -48,11 +58,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
       floatingActionButton: Consumer<AuthProvider>(
         builder: (context, auth, _) {
-          if (!auth.hasPermission('manage_schedules')) return const SizedBox.shrink();
+          if (!auth.hasPermission('manage_schedules')) {
+            return const SizedBox.shrink();
+          }
           return FloatingActionButton(
-            onPressed: () => _showCreateScheduleDialog(),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showCreateScheduleDialog();
+            },
             backgroundColor: AppTheme.primaryColor,
-            child: const Icon(Icons.add_rounded),
+            elevation: 2,
+            child: const Icon(Icons.add_rounded, size: 24),
           );
         },
       ),
@@ -65,18 +81,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: AppTheme.warningColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+              color: AppTheme.warningColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
             ),
             child: const Icon(
               Icons.calendar_month_rounded,
               color: AppTheme.warningColor,
-              size: 24,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,15 +100,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 Text(
                   'Schedule',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
                 Text(
-                  'Manage class & work schedules',
+                  'Class & work schedules',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: AppTheme.textSecondary,
                   ),
                 ),
@@ -106,7 +122,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildDaySelector() {
     return Container(
-      height: 44,
+      height: 42,
       margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -118,28 +134,51 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
           return GestureDetector(
             onTap: () {
+              HapticFeedback.selectionClick();
               setState(() => _selectedDay = day);
             },
-            child: Container(
+            child: AnimatedContainer(
+              duration: AppTheme.animFast,
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 15),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppTheme.primaryColor
-                    : AppTheme.cardDark,
-                borderRadius: BorderRadius.circular(12),
+                    : AppTheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(11),
                 border: isToday && !isSelected
-                    ? Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.5))
+                    ? Border.all(
+                        color: AppTheme.primaryColor
+                            .withValues(alpha: 0.4))
                     : null,
               ),
               alignment: Alignment.center,
-              child: Text(
-                day.substring(0, 3),
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppTheme.textSecondary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    day.substring(0, 3),
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : (isToday
+                              ? AppTheme.primaryColor
+                              : AppTheme.textSecondary),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (isToday && !isSelected)
+                    Container(
+                      width: 4,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 2),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
               ),
             ),
           );
@@ -154,37 +193,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         final schedules = provider.getSchedulesByDay(_selectedDay);
 
         if (schedules.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardDark,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(Icons.event_available_rounded,
-                      color: AppTheme.textTertiary, size: 48),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'No classes scheduled',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'No schedule for $_selectedDay',
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
+          return EmptyState(
+            icon: Icons.event_available_rounded,
+            title: 'No classes scheduled',
+            subtitle: 'No schedule for $_selectedDay',
           );
         }
 
@@ -192,14 +204,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           onRefresh: _loadData,
           color: AppTheme.primaryColor,
           child: ListView.builder(
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
             padding: const EdgeInsets.all(AppTheme.spacingMD),
             itemCount: schedules.length,
             itemBuilder: (context, index) {
-              return FadeInUp(
-                duration: const Duration(milliseconds: 400),
-                delay: Duration(milliseconds: index * 80),
-                child: _buildScheduleCard(schedules[index], index),
-              );
+              return _buildScheduleCard(schedules[index], index);
             },
           ),
         );
@@ -219,27 +229,33 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     return Dismissible(
       key: Key(schedule.id),
-      direction: context.read<AuthProvider>().hasPermission('manage_schedules')
-          ? DismissDirection.endToStart
-          : DismissDirection.none,
+      direction:
+          context.read<AuthProvider>().hasPermission('manage_schedules')
+              ? DismissDirection.endToStart
+              : DismissDirection.none,
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: AppTheme.errorColor.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+          color: AppTheme.errorColor.withValues(alpha: 0.12),
+          borderRadius:
+              BorderRadius.circular(AppTheme.radiusLarge),
         ),
-        child: const Icon(Icons.delete_rounded, color: AppTheme.errorColor),
+        child: const Icon(Icons.delete_rounded,
+            color: AppTheme.errorColor, size: 22),
       ),
       confirmDismiss: (_) async {
         return await showDialog(
           context: context,
           builder: (context) => AlertDialog(
             backgroundColor: AppTheme.cardDark,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Delete Schedule', style: TextStyle(color: Colors.white)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
+            title: const Text('Delete Schedule',
+                style: TextStyle(color: Colors.white, fontSize: 16)),
             content: Text('Delete "${schedule.name}"?',
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 14)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -247,25 +263,40 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete', style: TextStyle(color: AppTheme.errorColor)),
+                child: const Text('Delete',
+                    style:
+                        TextStyle(color: AppTheme.errorColor)),
               ),
             ],
           ),
         );
       },
       onDismissed: (_) {
-        context.read<ScheduleProvider>().deleteSchedule(schedule.id);
+        context
+            .read<ScheduleProvider>()
+            .deleteSchedule(schedule.id);
       },
       child: GlassCard(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Row(
           children: [
+            // Left color bar
+            Container(
+              width: 4,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
             // Time column
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(9),
               ),
               child: Column(
                 children: [
@@ -273,28 +304,28 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     schedule.startTime,
                     style: TextStyle(
                       color: color,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   Container(
                     width: 1,
-                    height: 10,
+                    height: 8,
                     color: color.withValues(alpha: 0.3),
-                    margin: const EdgeInsets.symmetric(vertical: 2),
+                    margin: const EdgeInsets.symmetric(vertical: 1),
                   ),
                   Text(
                     schedule.endTime,
                     style: TextStyle(
-                      color: color.withValues(alpha: 0.7),
-                      fontSize: 12,
+                      color: color.withValues(alpha: 0.6),
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             // Info column
             Expanded(
               child: Column(
@@ -304,56 +335,56 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     schedule.name,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       if (schedule.className != null) ...[
-                        Icon(Icons.class_rounded, color: AppTheme.textTertiary, size: 14),
-                        const SizedBox(width: 4),
+                        Icon(Icons.class_rounded,
+                            color: AppTheme.textTertiary, size: 13),
+                        const SizedBox(width: 3),
                         Text(
                           schedule.className!,
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 11),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                       ],
                       if (schedule.room != null) ...[
-                        Icon(Icons.room_rounded, color: AppTheme.textTertiary, size: 14),
-                        const SizedBox(width: 4),
+                        Icon(Icons.room_rounded,
+                            color: AppTheme.textTertiary, size: 13),
+                        const SizedBox(width: 3),
                         Text(
                           schedule.room!,
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 11),
                         ),
                       ],
                     ],
                   ),
                   if (schedule.teacherName != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(top: 3),
                       child: Row(
                         children: [
-                          Icon(Icons.person_rounded, color: AppTheme.textTertiary, size: 14),
-                          const SizedBox(width: 4),
+                          Icon(Icons.person_rounded,
+                              color: AppTheme.textTertiary, size: 13),
+                          const SizedBox(width: 3),
                           Text(
                             schedule.teacherName!,
-                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                            style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 11),
                           ),
                         ],
                       ),
                     ),
                 ],
-              ),
-            ),
-            // Color indicator
-            Container(
-              width: 4,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(2),
               ),
             ),
           ],
@@ -384,166 +415,265 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppTheme.cardDark,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24)),
+                border: Border.all(
+                    color:
+                        Colors.white.withValues(alpha: 0.06)),
               ),
               child: Column(
                 children: [
                   Container(
-                    width: 40,
+                    width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.textTertiary,
+                      color: AppTheme.textTertiary
+                          .withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         'Add Schedule',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: AppTheme.textSecondary),
-                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close,
+                            color: AppTheme.textSecondary,
+                            size: 20),
+                        onPressed: () =>
+                            Navigator.pop(context),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Expanded(
                     child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
                       child: Column(
                         children: [
                           TextField(
                             controller: nameController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Schedule Name',
-                              prefixIcon: Icon(Icons.event_note_outlined),
+                              prefixIcon: Icon(
+                                  Icons.event_note_outlined,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
                             controller: subjectController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Subject',
-                              prefixIcon: Icon(Icons.book_outlined),
+                              prefixIcon: Icon(
+                                  Icons.book_outlined,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
                             controller: classController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Class',
-                              prefixIcon: Icon(Icons.class_outlined),
+                              prefixIcon: Icon(
+                                  Icons.class_outlined,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
                             controller: roomController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Room',
-                              prefixIcon: Icon(Icons.room_outlined),
+                              prefixIcon: Icon(
+                                  Icons.room_outlined,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
                             controller: teacherController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Teacher Name',
-                              prefixIcon: Icon(Icons.person_outline),
+                              prefixIcon: Icon(
+                                  Icons.person_outline,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
-                            initialValue: selectedDay,
+                            value: selectedDay,
                             decoration: const InputDecoration(
                               labelText: 'Day of Week',
-                              prefixIcon: Icon(Icons.calendar_today_outlined),
+                              prefixIcon: Icon(
+                                  Icons
+                                      .calendar_today_outlined,
+                                  size: 20),
                             ),
                             dropdownColor: AppTheme.inputDark,
-                            style: const TextStyle(color: Colors.white),
-                            items: _days.map((d) => DropdownMenuItem(
-                              value: d,
-                              child: Text(d),
-                            )).toList(),
-                            onChanged: (v) => setModalState(() => selectedDay = v!),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14),
+                            items: _days
+                                .map((d) =>
+                                    DropdownMenuItem(
+                                      value: d,
+                                      child: Text(d),
+                                    ))
+                                .toList(),
+                            onChanged: (v) =>
+                                setModalState(
+                                    () => selectedDay = v!),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () async {
-                                    final time = await showTimePicker(
+                                    final time =
+                                        await showTimePicker(
                                       context: context,
                                       initialTime: startTime,
-                                      builder: (context, child) => Theme(
-                                        data: ThemeData.dark().copyWith(
-                                          colorScheme: const ColorScheme.dark(primary: AppTheme.primaryColor),
+                                      builder:
+                                          (context, child) =>
+                                              Theme(
+                                        data: ThemeData.dark()
+                                            .copyWith(
+                                          colorScheme:
+                                              const ColorScheme
+                                                  .dark(
+                                            primary: AppTheme
+                                                .primaryColor,
+                                          ),
                                         ),
                                         child: child!,
                                       ),
                                     );
-                                    if (time != null) setModalState(() => startTime = time);
+                                    if (time != null) {
+                                      setModalState(() =>
+                                          startTime = time);
+                                    }
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.all(14),
+                                    padding:
+                                        const EdgeInsets.all(
+                                            12),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.inputDark,
-                                      borderRadius: BorderRadius.circular(12),
+                                      color:
+                                          AppTheme.inputDark,
+                                      borderRadius:
+                                          BorderRadius
+                                              .circular(12),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.access_time, color: AppTheme.textTertiary, size: 18),
-                                        const SizedBox(width: 8),
+                                        const Icon(
+                                            Icons.access_time,
+                                            color: AppTheme
+                                                .textTertiary,
+                                            size: 16),
+                                        const SizedBox(
+                                            width: 6),
                                         Text(
                                           '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
-                                          style: const TextStyle(color: Colors.white),
+                                          style: const TextStyle(
+                                              color: Colors
+                                                  .white,
+                                              fontSize: 13),
                                         ),
                                       ],
                                     ),
                                   ),
                                 ),
                               ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                child: Text('to', style: TextStyle(color: AppTheme.textSecondary)),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                child: const Text('to',
+                                    style: TextStyle(
+                                        color: AppTheme
+                                            .textSecondary,
+                                        fontSize: 13)),
                               ),
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () async {
-                                    final time = await showTimePicker(
+                                    final time =
+                                        await showTimePicker(
                                       context: context,
                                       initialTime: endTime,
-                                      builder: (context, child) => Theme(
-                                        data: ThemeData.dark().copyWith(
-                                          colorScheme: const ColorScheme.dark(primary: AppTheme.primaryColor),
+                                      builder:
+                                          (context, child) =>
+                                              Theme(
+                                        data: ThemeData.dark()
+                                            .copyWith(
+                                          colorScheme:
+                                              const ColorScheme
+                                                  .dark(
+                                            primary: AppTheme
+                                                .primaryColor,
+                                          ),
                                         ),
                                         child: child!,
                                       ),
                                     );
-                                    if (time != null) setModalState(() => endTime = time);
+                                    if (time != null) {
+                                      setModalState(() =>
+                                          endTime = time);
+                                    }
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.all(14),
+                                    padding:
+                                        const EdgeInsets.all(
+                                            12),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.inputDark,
-                                      borderRadius: BorderRadius.circular(12),
+                                      color:
+                                          AppTheme.inputDark,
+                                      borderRadius:
+                                          BorderRadius
+                                              .circular(12),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.access_time, color: AppTheme.textTertiary, size: 18),
-                                        const SizedBox(width: 8),
+                                        const Icon(
+                                            Icons.access_time,
+                                            color: AppTheme
+                                                .textTertiary,
+                                            size: 16),
+                                        const SizedBox(
+                                            width: 6),
                                         Text(
                                           '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
-                                          style: const TextStyle(color: Colors.white),
+                                          style: const TextStyle(
+                                              color: Colors
+                                                  .white,
+                                              fontSize: 13),
                                         ),
                                       ],
                                     ),
@@ -552,54 +682,94 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,
-                            height: 52,
+                            height: 48,
                             child: ElevatedButton(
                               onPressed: () async {
-                                if (nameController.text.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                if (nameController
+                                    .text.isEmpty) {
+                                  ScaffoldMessenger.of(
+                                          context)
+                                      .showSnackBar(
                                     const SnackBar(
-                                      content: Text('Please enter a schedule name'),
-                                      backgroundColor: AppTheme.errorColor,
+                                      content: Text(
+                                          'Please enter a schedule name'),
+                                      backgroundColor:
+                                          AppTheme
+                                              .errorColor,
                                     ),
                                   );
                                   return;
                                 }
 
                                 final now = DateTime.now();
-                                final schedule = ScheduleModel(
+                                final schedule =
+                                    ScheduleModel(
                                   id: const Uuid().v4(),
-                                  name: nameController.text,
-                                  subject: subjectController.text.isEmpty ? null : subjectController.text,
-                                  className: classController.text.isEmpty ? null : classController.text,
-                                  room: roomController.text.isEmpty ? null : roomController.text,
-                                  teacherName: teacherController.text.isEmpty ? null : teacherController.text,
+                                  name:
+                                      nameController.text,
+                                  subject: subjectController
+                                          .text.isEmpty
+                                      ? null
+                                      : subjectController
+                                          .text,
+                                  className: classController
+                                          .text.isEmpty
+                                      ? null
+                                      : classController
+                                          .text,
+                                  room: roomController
+                                          .text.isEmpty
+                                      ? null
+                                      : roomController
+                                          .text,
+                                  teacherName:
+                                      teacherController
+                                              .text.isEmpty
+                                          ? null
+                                          : teacherController
+                                              .text,
                                   dayOfWeek: selectedDay,
-                                  startTime: '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
-                                  endTime: '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
+                                  startTime:
+                                      '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
+                                  endTime:
+                                      '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
                                   createdAt: now,
                                   updatedAt: now,
                                 );
 
-                                final auth = context.read<AuthProvider>();
-                                await context.read<ScheduleProvider>().createSchedule(
+                                final auth = context
+                                    .read<AuthProvider>();
+                                await context
+                                    .read<
+                                        ScheduleProvider>()
+                                    .createSchedule(
                                       schedule,
-                                      createdBy: auth.currentUser?.id,
+                                      createdBy: auth
+                                          .currentUser?.id,
                                     );
 
                                 if (context.mounted) {
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ScaffoldMessenger.of(
+                                          context)
+                                      .showSnackBar(
                                     SnackBar(
-                                      content: Text('Schedule "${schedule.name}" created'),
-                                      backgroundColor: AppTheme.successColor,
+                                      content: Text(
+                                          'Schedule "${schedule.name}" created'),
+                                      backgroundColor:
+                                          AppTheme
+                                              .successColor,
                                     ),
                                   );
                                 }
                               },
-                              child: const Text('Create Schedule'),
+                              child: const Text(
+                                  'Create Schedule',
+                                  style: TextStyle(
+                                      fontSize: 14)),
                             ),
                           ),
                         ],

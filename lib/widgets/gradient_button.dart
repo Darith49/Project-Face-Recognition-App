@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
+import 'package:flutter/services.dart';
+import '../core/theme/app_theme.dart';
 
 class GradientButton extends StatefulWidget {
   final String text;
@@ -36,10 +37,10 @@ class _GradientButtonState extends State<GradientButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 120),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -56,66 +57,64 @@ class _GradientButtonState extends State<GradientButton>
       onTapDown: (_) => _controller.forward(),
       onTapUp: (_) {
         _controller.reverse();
-        widget.onPressed?.call();
+        if (widget.onPressed != null) {
+          HapticFeedback.lightImpact();
+          widget.onPressed!.call();
+        }
       },
       onTapCancel: () => _controller.reverse(),
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              width: widget.width ?? double.infinity,
-              height: widget.height ?? 56,
-              decoration: BoxDecoration(
-                gradient: widget.onPressed != null
-                    ? (widget.gradient ?? AppTheme.primaryGradient)
-                    : LinearGradient(
-                        colors: [Colors.grey.shade800, Colors.grey.shade700],
-                      ),
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                boxShadow: widget.onPressed != null
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Center(
-                child: widget.isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Container(
+          width: widget.width ?? double.infinity,
+          height: widget.height ?? 52,
+          decoration: BoxDecoration(
+            gradient: widget.onPressed != null
+                ? (widget.gradient ?? AppTheme.primaryGradient)
+                : LinearGradient(
+                    colors: [Colors.grey.shade800, Colors.grey.shade700],
+                  ),
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            boxShadow: widget.onPressed != null
+                ? [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (widget.icon != null) ...[
+                        Icon(widget.icon, color: Colors.white, size: 19),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        widget.text,
+                        style: const TextStyle(
                           color: Colors.white,
-                          strokeWidth: 2.5,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
                         ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (widget.icon != null) ...[
-                            Icon(widget.icon, color: Colors.white, size: 20),
-                            const SizedBox(width: 8),
-                          ],
-                          Text(
-                            widget.text,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
                       ),
-              ),
-            ),
-          );
-        },
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }

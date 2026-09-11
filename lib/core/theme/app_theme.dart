@@ -4,24 +4,27 @@ class AppTheme {
   AppTheme._();
 
   // Primary Colors
-  static const Color primaryColor = Color(0xFF6C63FF);
-  static const Color primaryDark = Color(0xFF5A52D5);
-  static const Color primaryLight = Color(0xFF8B85FF);
+  static const Color primaryColor = Color(0xFF7C6BFF);
+  static const Color primaryDark = Color(0xFF6558E0);
+  static const Color primaryLight = Color(0xFF9D92FF);
 
   // Accent Colors
   static const Color accentColor = Color(0xFF00D4AA);
   static const Color accentDark = Color(0xFF00B894);
   static const Color accentLight = Color(0xFF55EFC4);
 
-  // Background Colors
-  static const Color scaffoldDark = Color(0xFF0A0E21);
-  static const Color cardDark = Color(0xFF1A1F3D);
-  static const Color surfaceDark = Color(0xFF141829);
-  static const Color inputDark = Color(0xFF1E2340);
+  // Background Colors — layered surface system for depth
+  static const Color scaffoldDark = Color(0xFF0B0F1E);
+  static const Color surfaceDark = Color(0xFF121728);
+  static const Color cardDark = Color(0xFF1B2038);
+  static const Color cardDarkElevated = Color(0xFF212748);
+  static const Color inputDark = Color(0xFF1E2442);
+  static const Color surfaceContainer = Color(0xFF161B30);
+  static const Color surfaceContainerHigh = Color(0xFF1F2540);
 
   // Text Colors
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB0B3C5);
+  static const Color textPrimary = Color(0xFFF0F1F5);
+  static const Color textSecondary = Color(0xFFADB1C4);
   static const Color textTertiary = Color(0xFF6B6F82);
 
   // Status Colors
@@ -32,7 +35,7 @@ class AppTheme {
 
   // Gradient Colors
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF6C63FF), Color(0xFF4DABF7)],
+    colors: [Color(0xFF7C6BFF), Color(0xFF4DABF7)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -44,33 +47,63 @@ class AppTheme {
   );
 
   static const LinearGradient darkGradient = LinearGradient(
-    colors: [Color(0xFF0A0E21), Color(0xFF141829)],
+    colors: [Color(0xFF0B0F1E), Color(0xFF121728)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient cardGradient = LinearGradient(
-    colors: [Color(0xFF1A1F3D), Color(0xFF141829)],
+    colors: [Color(0xFF1B2038), Color(0xFF161B30)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  // Shadows
-  static List<BoxShadow> cardShadow = [
+  static const LinearGradient warmGradient = LinearGradient(
+    colors: [Color(0xFFFF6B6B), Color(0xFFFFB946)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Lightweight shadows — drastically reduced for performance
+  static List<BoxShadow> get cardShadow => [
     BoxShadow(
-      color: Colors.black.withValues(alpha: 0.3),
-      blurRadius: 20,
-      offset: const Offset(0, 8),
+      color: Colors.black.withValues(alpha: 0.15),
+      blurRadius: 6,
+      offset: const Offset(0, 2),
     ),
   ];
 
-  static List<BoxShadow> primaryShadow = [
+  static List<BoxShadow> get primaryShadow => [
     BoxShadow(
-      color: primaryColor.withValues(alpha: 0.4),
-      blurRadius: 20,
-      offset: const Offset(0, 8),
+      color: primaryColor.withValues(alpha: 0.25),
+      blurRadius: 8,
+      offset: const Offset(0, 3),
     ),
   ];
+
+  static List<BoxShadow> elevatedShadow(Color color) => [
+    BoxShadow(
+      color: color.withValues(alpha: 0.2),
+      blurRadius: 8,
+      offset: const Offset(0, 3),
+    ),
+  ];
+
+  // Lightweight card decoration — uses border emphasis over shadows
+  static BoxDecoration cardDecoration({
+    LinearGradient? gradient,
+    Color? borderColor,
+    double borderRadius = radiusLarge,
+  }) {
+    return BoxDecoration(
+      gradient: gradient ?? cardGradient,
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: borderColor ?? Colors.white.withValues(alpha: 0.06),
+        width: 1,
+      ),
+    );
+  }
 
   // Border Radius
   static const double radiusSmall = 8.0;
@@ -86,6 +119,12 @@ class AppTheme {
   static const double spacingLG = 24.0;
   static const double spacingXL = 32.0;
   static const double spacingXXL = 48.0;
+
+  // Animation durations
+  static const Duration animFast = Duration(milliseconds: 150);
+  static const Duration animNormal = Duration(milliseconds: 250);
+  static const Duration animSlow = Duration(milliseconds: 400);
+  static const Duration animPageTransition = Duration(milliseconds: 350);
 
   static ThemeData get darkTheme {
     return ThemeData(
@@ -130,7 +169,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
@@ -142,10 +181,10 @@ class AppTheme {
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: spacingMD,
-          vertical: spacingMD,
+          vertical: 14,
         ),
-        hintStyle: const TextStyle(color: textTertiary),
-        labelStyle: const TextStyle(color: textSecondary),
+        hintStyle: const TextStyle(color: textTertiary, fontSize: 14),
+        labelStyle: const TextStyle(color: textSecondary, fontSize: 14),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -154,13 +193,13 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(
             horizontal: spacingLG,
-            vertical: spacingMD,
+            vertical: 14,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
           ),
           textStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -174,10 +213,13 @@ class AppTheme {
           ),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        elevation: 8,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: surfaceDark,
@@ -191,8 +233,8 @@ class AppTheme {
         thickness: 1,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: cardDark,
-        contentTextStyle: const TextStyle(color: textPrimary),
+        backgroundColor: cardDarkElevated,
+        contentTextStyle: const TextStyle(color: textPrimary, fontSize: 14),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
         ),

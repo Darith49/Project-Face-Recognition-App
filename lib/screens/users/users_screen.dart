@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_theme.dart';
-
 import '../../providers/user_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user_model.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/empty_state.dart';
 import 'user_detail_screen.dart';
 
 class UsersScreen extends StatefulWidget {
@@ -21,7 +21,6 @@ class _UsersScreenState extends State<UsersScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _searchController = TextEditingController();
-
 
   @override
   void initState() {
@@ -68,11 +67,17 @@ class _UsersScreenState extends State<UsersScreen>
       ),
       floatingActionButton: Consumer<AuthProvider>(
         builder: (context, auth, _) {
-          if (!auth.hasPermission('manage_users')) return const SizedBox.shrink();
+          if (!auth.hasPermission('manage_users')) {
+            return const SizedBox.shrink();
+          }
           return FloatingActionButton(
-            onPressed: () => _showCreateUserDialog(),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showCreateUserDialog();
+            },
             backgroundColor: AppTheme.primaryColor,
-            child: const Icon(Icons.person_add_rounded),
+            elevation: 2,
+            child: const Icon(Icons.person_add_rounded, size: 22),
           );
         },
       ),
@@ -85,18 +90,18 @@ class _UsersScreenState extends State<UsersScreen>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: AppTheme.accentColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+              color: AppTheme.accentColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
             ),
             child: const Icon(
               Icons.people_rounded,
               color: AppTheme.accentColor,
-              size: 24,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Consumer<UserProvider>(
               builder: (context, provider, _) {
@@ -106,7 +111,7 @@ class _UsersScreenState extends State<UsersScreen>
                     const Text(
                       'Users',
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -114,7 +119,7 @@ class _UsersScreenState extends State<UsersScreen>
                     Text(
                       '${provider.users.length} registered users',
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: AppTheme.textSecondary,
                       ),
                     ),
@@ -133,19 +138,23 @@ class _UsersScreenState extends State<UsersScreen>
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
       child: TextField(
         controller: _searchController,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Search users...',
-          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textTertiary),
+          prefixIcon: const Icon(Icons.search_rounded,
+              color: AppTheme.textTertiary, size: 20),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear_rounded, color: AppTheme.textTertiary),
+                  icon: const Icon(Icons.clear_rounded,
+                      color: AppTheme.textTertiary, size: 18),
                   onPressed: () {
                     _searchController.clear();
                     setState(() {});
                   },
                 )
               : null,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         onChanged: (value) => setState(() {}),
       ),
@@ -156,7 +165,7 @@ class _UsersScreenState extends State<UsersScreen>
     return Container(
       margin: const EdgeInsets.all(AppTheme.spacingMD),
       decoration: BoxDecoration(
-        color: AppTheme.cardDark,
+        color: AppTheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: TabBar(
@@ -168,7 +177,8 @@ class _UsersScreenState extends State<UsersScreen>
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: Colors.white,
         unselectedLabelColor: AppTheme.textTertiary,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        labelStyle:
+            const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         dividerHeight: 0,
         tabs: const [
           Tab(text: 'Students'),
@@ -191,19 +201,10 @@ class _UsersScreenState extends State<UsersScreen>
         }
 
         if (users.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.people_outline_rounded,
-                    color: AppTheme.textTertiary, size: 48),
-                const SizedBox(height: 12),
-                const Text(
-                  'No users found',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
+          return const EmptyState(
+            icon: Icons.people_outline_rounded,
+            title: 'No users found',
+            subtitle: 'Try adjusting your search or filters',
           );
         }
 
@@ -211,14 +212,13 @@ class _UsersScreenState extends State<UsersScreen>
           onRefresh: _loadData,
           color: AppTheme.primaryColor,
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingMD),
             itemCount: users.length,
             itemBuilder: (context, index) {
-              return FadeInUp(
-                duration: const Duration(milliseconds: 400),
-                delay: Duration(milliseconds: index * 30),
-                child: _buildUserCard(users[index]),
-              );
+              return _buildUserCard(users[index]);
             },
           ),
         );
@@ -237,6 +237,7 @@ class _UsersScreenState extends State<UsersScreen>
 
     return GlassCard(
       onTap: () {
+        HapticFeedback.selectionClick();
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -244,30 +245,30 @@ class _UsersScreenState extends State<UsersScreen>
           ),
         ).then((_) => _loadData());
       },
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [color, color.withValues(alpha: 0.6)],
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(13),
             ),
             child: Center(
               child: Text(
                 user.name.substring(0, 1).toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,15 +280,17 @@ class _UsersScreenState extends State<UsersScreen>
                         user.name,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    if (user.hasFaceData)
-                      Icon(Icons.face_rounded, color: AppTheme.successColor, size: 16),
+                    if (user.hasFaceData) ...[
+                      const SizedBox(width: 6),
+                      Icon(Icons.face_rounded,
+                          color: AppTheme.successColor, size: 15),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -295,30 +298,32 @@ class _UsersScreenState extends State<UsersScreen>
                   '${user.userId} • ${user.className ?? user.department ?? user.role}',
                   style: const TextStyle(
                     color: AppTheme.textSecondary,
-                    fontSize: 12,
+                    fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               user.role.toUpperCase(),
               style: TextStyle(
                 color: color,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Icon(Icons.chevron_right_rounded, color: AppTheme.textTertiary, size: 20),
+          const SizedBox(width: 6),
+          Icon(Icons.chevron_right_rounded,
+              color: AppTheme.textTertiary, size: 18),
         ],
       ),
     );
@@ -348,165 +353,213 @@ class _UsersScreenState extends State<UsersScreen>
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppTheme.cardDark,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24)),
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.06)),
               ),
               child: Column(
                 children: [
                   // Handle bar
                   Container(
-                    width: 40,
+                    width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.textTertiary,
+                      color:
+                          AppTheme.textTertiary.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         'Add New User',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                        icon: const Icon(Icons.close,
+                            color: AppTheme.textSecondary, size: 20),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Expanded(
                     child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
                       child: Column(
                         children: [
                           TextField(
                             controller: nameController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Full Name',
-                              prefixIcon: Icon(Icons.person_outline),
+                              prefixIcon: Icon(Icons.person_outline,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
                             controller: userIdController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'User ID (e.g., STD009)',
-                              prefixIcon: Icon(Icons.badge_outlined),
+                              prefixIcon: Icon(Icons.badge_outlined,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
                             controller: emailController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Email',
-                              prefixIcon: Icon(Icons.email_outlined),
+                              prefixIcon: Icon(Icons.email_outlined,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
                             controller: passwordController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             obscureText: true,
                             decoration: const InputDecoration(
                               labelText: 'Password',
-                              prefixIcon: Icon(Icons.lock_outline),
+                              prefixIcon:
+                                  Icon(Icons.lock_outline, size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
                             controller: phoneController,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Phone (Optional)',
-                              prefixIcon: Icon(Icons.phone_outlined),
+                              prefixIcon: Icon(Icons.phone_outlined,
+                                  size: 20),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           // Role dropdown
                           DropdownButtonFormField<String>(
-                            initialValue: selectedRole,
+                            value: selectedRole,
                             decoration: const InputDecoration(
                               labelText: 'Role',
-                              prefixIcon: Icon(Icons.work_outline),
+                              prefixIcon:
+                                  Icon(Icons.work_outline, size: 20),
                             ),
                             dropdownColor: AppTheme.inputDark,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             items: const [
-                              DropdownMenuItem(value: 'student', child: Text('Student')),
-                              DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
-                              DropdownMenuItem(value: 'employee', child: Text('Employee')),
-                              DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                              DropdownMenuItem(
+                                  value: 'student',
+                                  child: Text('Student')),
+                              DropdownMenuItem(
+                                  value: 'teacher',
+                                  child: Text('Teacher')),
+                              DropdownMenuItem(
+                                  value: 'employee',
+                                  child: Text('Employee')),
+                              DropdownMenuItem(
+                                  value: 'admin',
+                                  child: Text('Admin')),
                             ],
-                            onChanged: (v) => setModalState(() => selectedRole = v!),
+                            onChanged: (v) => setModalState(
+                                () => selectedRole = v!),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           // Gender dropdown
                           DropdownButtonFormField<String>(
-                            initialValue: selectedGender,
+                            value: selectedGender,
                             decoration: const InputDecoration(
                               labelText: 'Gender',
-                              prefixIcon: Icon(Icons.wc_outlined),
+                              prefixIcon:
+                                  Icon(Icons.wc_outlined, size: 20),
                             ),
                             dropdownColor: AppTheme.inputDark,
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             items: const [
-                              DropdownMenuItem(value: 'Male', child: Text('Male')),
-                              DropdownMenuItem(value: 'Female', child: Text('Female')),
-                              DropdownMenuItem(value: 'Other', child: Text('Other')),
+                              DropdownMenuItem(
+                                  value: 'Male',
+                                  child: Text('Male')),
+                              DropdownMenuItem(
+                                  value: 'Female',
+                                  child: Text('Female')),
+                              DropdownMenuItem(
+                                  value: 'Other',
+                                  child: Text('Other')),
                             ],
-                            onChanged: (v) => setModalState(() => selectedGender = v!),
+                            onChanged: (v) => setModalState(
+                                () => selectedGender = v!),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           // Class & Department
                           TextField(
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Class (e.g., CS-Y3)',
-                              prefixIcon: Icon(Icons.class_outlined),
+                              prefixIcon: Icon(Icons.class_outlined,
+                                  size: 20),
                             ),
-                            onChanged: (v) => selectedClass = v.isEmpty ? null : v,
+                            onChanged: (v) =>
+                                selectedClass = v.isEmpty ? null : v,
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Department',
-                              prefixIcon: Icon(Icons.business_outlined),
+                              prefixIcon: Icon(
+                                  Icons.business_outlined,
+                                  size: 20),
                             ),
-                            onChanged: (v) => selectedDepartment = v.isEmpty ? null : v,
+                            onChanged: (v) => selectedDepartment =
+                                v.isEmpty ? null : v,
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           TextField(
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             decoration: const InputDecoration(
                               labelText: 'Group (Optional)',
-                              prefixIcon: Icon(Icons.group_outlined),
+                              prefixIcon: Icon(Icons.group_outlined,
+                                  size: 20),
                             ),
-                            onChanged: (v) => selectedGroup = v.isEmpty ? null : v,
+                            onChanged: (v) =>
+                                selectedGroup = v.isEmpty ? null : v,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,
-                            height: 52,
+                            height: 48,
                             child: ElevatedButton(
                               onPressed: () async {
                                 if (nameController.text.isEmpty ||
                                     userIdController.text.isEmpty ||
                                     emailController.text.isEmpty ||
                                     passwordController.text.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
                                     const SnackBar(
-                                      content: Text('Please fill in all required fields'),
-                                      backgroundColor: AppTheme.errorColor,
+                                      content: Text(
+                                          'Please fill in all required fields'),
+                                      backgroundColor:
+                                          AppTheme.errorColor,
                                     ),
                                   );
                                   return;
@@ -524,28 +577,38 @@ class _UsersScreenState extends State<UsersScreen>
                                   group: selectedGroup,
                                   className: selectedClass,
                                   department: selectedDepartment,
-                                  phone: phoneController.text.isEmpty ? null : phoneController.text,
+                                  phone: phoneController.text.isEmpty
+                                      ? null
+                                      : phoneController.text,
                                   createdAt: now,
                                   updatedAt: now,
                                 );
 
-                                final auth = context.read<AuthProvider>();
-                                final success = await context.read<UserProvider>().createUser(
+                                final auth =
+                                    context.read<AuthProvider>();
+                                final success = await context
+                                    .read<UserProvider>()
+                                    .createUser(
                                       user,
-                                      createdBy: auth.currentUser?.id,
+                                      createdBy:
+                                          auth.currentUser?.id,
                                     );
 
                                 if (success && context.mounted) {
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
                                     SnackBar(
-                                      content: Text('${user.name} has been added'),
-                                      backgroundColor: AppTheme.successColor,
+                                      content: Text(
+                                          '${user.name} has been added'),
+                                      backgroundColor:
+                                          AppTheme.successColor,
                                     ),
                                   );
                                 }
                               },
-                              child: const Text('Create User'),
+                              child: const Text('Create User',
+                                  style: TextStyle(fontSize: 14)),
                             ),
                           ),
                           const SizedBox(height: 20),

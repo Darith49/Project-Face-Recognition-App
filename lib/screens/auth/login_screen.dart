@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:animate_do/animate_do.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/gradient_button.dart';
@@ -19,15 +19,34 @@ class _LoginScreenState extends State<LoginScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  late AnimationController _bgController;
+  late AnimationController _entryController;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
 
   @override
   void initState() {
     super.initState();
-    _bgController = AnimationController(
-      duration: const Duration(seconds: 10),
+
+    // Single entry animation — no continuous background animation (perf fix)
+    _entryController = AnimationController(
+      duration: const Duration(milliseconds: 800),
       vsync: this,
-    )..repeat(reverse: true);
+    );
+
+    _fadeAnim = CurvedAnimation(
+      parent: _entryController,
+      curve: Curves.easeOut,
+    );
+
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entryController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _entryController.forward();
 
     // Pre-fill with admin credentials for easy testing
     _emailController.text = 'admin@faceattend.com';
@@ -38,12 +57,14 @@ class _LoginScreenState extends State<LoginScreen>
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _bgController.dispose();
+    _entryController.dispose();
     super.dispose();
   }
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+
+    HapticFeedback.lightImpact();
 
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.login(
@@ -54,11 +75,12 @@ class _LoginScreenState extends State<LoginScreen>
     if (success && mounted) {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const MainShell(),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const MainShell(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 500),
+          transitionDuration: const Duration(milliseconds: 400),
         ),
       );
     }
@@ -67,63 +89,41 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedBuilder(
-        animation: _bgController,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color.lerp(
-                    const Color(0xFF0A0E21),
-                    const Color(0xFF1A0A3E),
-                    _bgController.value,
-                  )!,
-                  Color.lerp(
-                    const Color(0xFF141829),
-                    const Color(0xFF0D1B3E),
-                    _bgController.value,
-                  )!,
-                ],
-              ),
-            ),
-            child: child,
-          );
-        },
+      body: Container(
+        decoration: const BoxDecoration(
+          // Static gradient — no continuous animation (saves GPU on low-end devices)
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0B0F1E),
+              Color(0xFF121728),
+            ],
+          ),
+        ),
         child: SafeArea(
           child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppTheme.spacingLG),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo & Branding
-                    FadeInDown(
-                      duration: const Duration(milliseconds: 800),
-                      child: _buildLogo(),
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: SlideTransition(
+                position: _slideAnim,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppTheme.spacingLG),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildLogo(),
+                        const SizedBox(height: 44),
+                        _buildLoginCard(),
+                        const SizedBox(height: 20),
+                        _buildQuickLoginHints(),
+                        const SizedBox(height: 24),
+                        _buildFooter(),
+                      ],
                     ),
-                    const SizedBox(height: 48),
-
-                    // Login Card
-                    FadeInUp(
-                      duration: const Duration(milliseconds: 800),
-                      delay: const Duration(milliseconds: 200),
-                      child: _buildLoginCard(),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Quick Login Hints
-                    FadeInUp(
-                      duration: const Duration(milliseconds: 800),
-                      delay: const Duration(milliseconds: 400),
-                      child: _buildQuickLoginHints(),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -137,43 +137,43 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       children: [
         Container(
-          width: 90,
-          height: 90,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
             gradient: AppTheme.primaryGradient,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primaryColor.withValues(alpha: 0.4),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
+                color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: const Icon(
             Icons.face_retouching_natural_rounded,
             color: Colors.white,
-            size: 48,
+            size: 40,
           ),
         ),
         const SizedBox(height: 20),
         const Text(
           'FaceAttend',
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 30,
             fontWeight: FontWeight.w800,
             color: Colors.white,
-            letterSpacing: 1.5,
+            letterSpacing: 1,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
-          'Smart Attendance System',
+          'SMART ATTENDANCE SYSTEM',
           style: TextStyle(
-            fontSize: 14,
-            color: AppTheme.textSecondary,
-            fontWeight: FontWeight.w400,
-            letterSpacing: 2,
+            fontSize: 11,
+            color: AppTheme.textSecondary.withValues(alpha: 0.6),
+            fontWeight: FontWeight.w500,
+            letterSpacing: 3,
           ),
         ),
       ],
@@ -183,20 +183,8 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildLoginCard() {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingLG),
-      decoration: BoxDecoration(
-        gradient: AppTheme.cardGradient,
-        borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
+      decoration: AppTheme.cardDecoration(
+        borderRadius: AppTheme.radiusXLarge,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,30 +192,31 @@ class _LoginScreenState extends State<LoginScreen>
           const Text(
             'Welcome Back',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
+          const SizedBox(height: 4),
+          const Text(
             'Sign in to manage attendance',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: AppTheme.textSecondary,
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
           // Email field
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
             decoration: InputDecoration(
               prefixIcon: Icon(
                 Icons.email_outlined,
                 color: AppTheme.textTertiary,
+                size: 20,
               ),
               hintText: 'Email address',
               hintStyle: TextStyle(color: AppTheme.textTertiary),
@@ -239,17 +228,18 @@ class _LoginScreenState extends State<LoginScreen>
               return null;
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Password field
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
             decoration: InputDecoration(
               prefixIcon: Icon(
                 Icons.lock_outline_rounded,
                 color: AppTheme.textTertiary,
+                size: 20,
               ),
               hintText: 'Password',
               hintStyle: TextStyle(color: AppTheme.textTertiary),
@@ -259,6 +249,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ? Icons.visibility_off_rounded
                       : Icons.visibility_rounded,
                   color: AppTheme.textTertiary,
+                  size: 20,
                 ),
                 onPressed: () {
                   setState(() {
@@ -283,24 +274,26 @@ class _LoginScreenState extends State<LoginScreen>
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppTheme.errorColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      color: AppTheme.errorColor.withValues(alpha: 0.08),
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.radiusMedium),
                       border: Border.all(
-                        color: AppTheme.errorColor.withValues(alpha: 0.3),
+                        color: AppTheme.errorColor.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline, color: AppTheme.errorColor, size: 18),
+                        Icon(Icons.error_outline,
+                            color: AppTheme.errorColor, size: 16),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             auth.error!,
                             style: TextStyle(
                               color: AppTheme.errorColor,
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -313,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen>
             },
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Login button
           Consumer<AuthProvider>(
@@ -333,28 +326,29 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildQuickLoginHints() {
     return Container(
-      padding: const EdgeInsets.all(AppTheme.spacingMD),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.cardDark.withValues(alpha: 0.5),
+        color: AppTheme.surfaceContainer.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: Colors.white.withValues(alpha: 0.04),
         ),
       ),
       child: Column(
         children: [
           Text(
-            'Quick Login',
+            'DEMO ACCOUNTS',
             style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 12,
+              color: AppTheme.textTertiary,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
-              letterSpacing: 1,
+              letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _buildQuickLoginItem('Admin', 'admin@faceattend.com', 'admin123'),
-          _buildQuickLoginItem('Teacher', 'thongheng@teacher.edu', 'teacher123'),
+          _buildQuickLoginItem(
+              'Teacher', 'thongheng@teacher.edu', 'teacher123'),
           _buildQuickLoginItem('Student', 'sokha@student.edu', 'student123'),
         ],
       ),
@@ -364,23 +358,24 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildQuickLoginItem(String role, String email, String password) {
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         _emailController.text = email;
         _passwordController.text = password;
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
+          color: Colors.white.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
         ),
         child: Row(
           children: [
             Container(
-              width: 28,
-              height: 28,
+              width: 26,
+              height: 26,
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                color: AppTheme.primaryColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Center(
@@ -389,7 +384,7 @@ class _LoginScreenState extends State<LoginScreen>
                   style: TextStyle(
                     color: AppTheme.primaryColor,
                     fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -411,7 +406,7 @@ class _LoginScreenState extends State<LoginScreen>
                     email,
                     style: TextStyle(
                       color: AppTheme.textTertiary,
-                      fontSize: 11,
+                      fontSize: 10,
                     ),
                   ),
                 ],
@@ -420,10 +415,21 @@ class _LoginScreenState extends State<LoginScreen>
             Icon(
               Icons.arrow_forward_ios_rounded,
               color: AppTheme.textTertiary,
-              size: 12,
+              size: 11,
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Text(
+      'Powered by FaceAttend',
+      style: TextStyle(
+        fontSize: 11,
+        color: AppTheme.textTertiary.withValues(alpha: 0.4),
+        letterSpacing: 0.5,
       ),
     );
   }

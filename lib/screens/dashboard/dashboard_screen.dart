@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
@@ -11,6 +11,8 @@ import '../../providers/schedule_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/section_header.dart';
+import '../../widgets/empty_state.dart';
 import '../auth/login_screen.dart';
 import '../face_recognition/face_scan_screen.dart';
 import '../../models/attendance_model.dart';
@@ -27,6 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, int> _weeklyStats = {};
   Map<String, int> _statusDistribution = {};
   double _attendanceRate = 0;
+  bool _statsLoaded = false;
 
   @override
   void initState() {
@@ -39,23 +42,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final userProvider = context.read<UserProvider>();
     final scheduleProvider = context.read<ScheduleProvider>();
 
+    // Load essential data first (fast)
     await Future.wait([
       attendanceProvider.loadTodayAttendance(),
       userProvider.loadUsers(),
       scheduleProvider.loadSchedules(),
     ]);
 
-    final weekly = await attendanceProvider.getWeeklyStats();
-    final distribution = await attendanceProvider.getStatusDistribution();
-    final rate = await attendanceProvider.getAttendanceRate();
-
+    // Load stats lazily after the first frame renders
     if (mounted) {
-      setState(() {
-        _weeklyStats = weekly;
-        _statusDistribution = distribution;
-        _attendanceRate = rate;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final weekly = await attendanceProvider.getWeeklyStats();
+        final distribution = await attendanceProvider.getStatusDistribution();
+        final rate = await attendanceProvider.getAttendanceRate();
+
+        if (mounted) {
+          setState(() {
+            _weeklyStats = weekly;
+            _statusDistribution = distribution;
+            _attendanceRate = rate;
+            _statsLoaded = true;
+          });
+        }
       });
     }
+  }
+
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
   }
 
   @override
@@ -70,68 +87,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onRefresh: _loadData,
             color: AppTheme.primaryColor,
             child: CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
               slivers: [
-                // App Bar
-                SliverToBoxAdapter(
-                  child: _buildHeader(),
-                ),
-
-                // Stats Cards
-                SliverToBoxAdapter(
-                  child: FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    child: _buildStatsGrid(),
+                SliverToBoxAdapter(child: _buildHeader()),
+                SliverToBoxAdapter(child: _buildStatsGrid()),
+                SliverToBoxAdapter(child: _buildQuickActions()),
+                SliverToBoxAdapter(child: _buildTodaySchedule()),
+                if (_statsLoaded) ...[
+                  SliverToBoxAdapter(
+                    child: RepaintBoundary(child: _buildWeeklyChart()),
                   ),
-                ),
-
-                // Quick Actions
-                SliverToBoxAdapter(
-                  child: FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    delay: const Duration(milliseconds: 100),
-                    child: _buildQuickActions(),
+                  SliverToBoxAdapter(
+                    child: RepaintBoundary(child: _buildStatusDistribution()),
                   ),
-                ),
-
-                // Today's Schedule
-                SliverToBoxAdapter(
-                  child: FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    delay: const Duration(milliseconds: 200),
-                    child: _buildTodaySchedule(),
-                  ),
-                ),
-
-                // Weekly Chart
-                SliverToBoxAdapter(
-                  child: FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    delay: const Duration(milliseconds: 300),
-                    child: _buildWeeklyChart(),
-                  ),
-                ),
-
-                // Status Distribution
-                SliverToBoxAdapter(
-                  child: FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    delay: const Duration(milliseconds: 400),
-                    child: _buildStatusDistribution(),
-                  ),
-                ),
-
-                // Recent Activity
-                SliverToBoxAdapter(
-                  child: FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    delay: const Duration(milliseconds: 500),
-                    child: _buildRecentActivity(),
-                  ),
-                ),
-
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 100),
-                ),
+                ],
+                SliverToBoxAdapter(child: _buildRecentActivity()),
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
           ),
@@ -144,82 +117,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
         return Padding(
-          padding: const EdgeInsets.all(AppTheme.spacingMD),
+          padding: const EdgeInsets.fromLTRB(
+              AppTheme.spacingMD, AppTheme.spacingMD, AppTheme.spacingMD, 8),
           child: Row(
             children: [
               // Profile Avatar
               Container(
-                width: 48,
-                height: 48,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   gradient: AppTheme.primaryGradient,
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: Center(
                   child: Text(
                     auth.currentUser?.name.substring(0, 1).toUpperCase() ?? 'A',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
+                      fontSize: 19,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hello, ${auth.currentUser?.name.split(' ').first ?? 'User'} 👋',
+                      '$_greeting, ${auth.currentUser?.name.split(' ').first ?? 'User'} 👋',
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
                     ),
+                    const SizedBox(height: 1),
                     Text(
-                      DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now()),
-                      style: TextStyle(
-                        fontSize: 13,
+                      DateFormat('EEEE, dd MMM yyyy').format(DateTime.now()),
+                      style: const TextStyle(
+                        fontSize: 12,
                         color: AppTheme.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              // Logout
+              // Notification + Logout
               GestureDetector(
                 onTap: () async {
+                  HapticFeedback.mediumImpact();
                   await auth.logout();
                   if (context.mounted) {
                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const LoginScreen()),
                     );
                   }
                 },
                 child: Container(
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: AppTheme.cardDark,
+                    color: AppTheme.surfaceContainer,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08),
+                      color: Colors.white.withValues(alpha: 0.06),
                     ),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.logout_rounded,
                     color: AppTheme.textSecondary,
-                    size: 20,
+                    size: 18,
                   ),
                 ),
               ),
@@ -237,10 +207,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
           child: Column(
             children: [
-              // Attendance Rate Card
+              // Attendance Rate Card — hero card
               GlassCard(
                 gradient: AppTheme.primaryGradient,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(18),
                 child: Row(
                   children: [
                     Expanded(
@@ -250,49 +220,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Text(
                             'Attendance Rate',
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           Text(
                             '${_attendanceRate.toStringAsFixed(1)}%',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 36,
+                              fontSize: 34,
                               fontWeight: FontWeight.w800,
+                              height: 1.1,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Overall performance',
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontSize: 11,
                             ),
                           ),
                         ],
                       ),
                     ),
                     SizedBox(
-                      width: 80,
-                      height: 80,
+                      width: 72,
+                      height: 72,
                       child: Stack(
+                        alignment: Alignment.center,
                         children: [
                           CircularProgressIndicator(
                             value: _attendanceRate / 100,
-                            strokeWidth: 8,
-                            backgroundColor: Colors.white.withValues(alpha: 0.2),
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                            strokeWidth: 6,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.15),
+                            valueColor:
+                                const AlwaysStoppedAnimation<Color>(
+                                    Colors.white),
                             strokeCap: StrokeCap.round,
                           ),
-                          Center(
-                            child: Icon(
-                              Icons.trending_up_rounded,
-                              color: Colors.white,
-                              size: 30,
-                            ),
+                          const Icon(
+                            Icons.trending_up_rounded,
+                            color: Colors.white,
+                            size: 26,
                           ),
                         ],
                       ),
@@ -300,7 +273,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               // Stats grid
               Row(
                 children: [
@@ -313,7 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       subtitle: 'Today',
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: StatCard(
                       title: 'Late',
@@ -325,7 +298,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
@@ -337,7 +310,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       subtitle: 'Today',
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: StatCard(
                       title: 'Total Users',
@@ -362,15 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
+          const SectionHeader(title: 'Quick Actions'),
           Row(
             children: [
               Expanded(
@@ -380,6 +345,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   subtitle: 'Check Attendance',
                   color: AppTheme.primaryColor,
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -389,14 +355,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: _buildActionCard(
-                  icon: Icons.qr_code_scanner_rounded,
+                  icon: Icons.edit_note_rounded,
                   title: 'Manual',
                   subtitle: 'Quick Entry',
                   color: AppTheme.accentColor,
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     _showManualAttendanceDialog();
                   },
                 ),
@@ -417,44 +384,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
+            colors: [
+              color.withValues(alpha: 0.12),
+              color.withValues(alpha: 0.04),
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           border: Border.all(
-            color: color.withValues(alpha: 0.2),
+            color: color.withValues(alpha: 0.15),
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(height: 12),
             Text(
               title,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
             Text(
               subtitle,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppTheme.textSecondary,
-                fontSize: 12,
+                fontSize: 11,
               ),
             ),
           ],
@@ -472,27 +443,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Today\'s Schedule',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
+              SectionHeader(
+                title: "Today's Schedule",
+                trailing: Text(
+                  '${todaySchedules.length} classes',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textTertiary,
                   ),
-                  Text(
-                    '${todaySchedules.length} classes',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 12),
               if (todaySchedules.isEmpty)
                 GlassCard(
                   child: Center(
@@ -501,14 +461,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Icon(
                           Icons.event_available_rounded,
                           color: AppTheme.textTertiary,
-                          size: 40,
+                          size: 36,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
+                        const SizedBox(height: 6),
+                        const Text(
                           'No classes scheduled today',
                           style: TextStyle(
                             color: AppTheme.textSecondary,
-                            fontSize: 14,
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -517,7 +477,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 )
               else
                 SizedBox(
-                  height: 100,
+                  height: 95,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: todaySchedules.length,
@@ -532,21 +492,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       final color = colors[index % colors.length];
 
                       return Container(
-                        width: 200,
-                        margin: EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.all(14),
+                        width: 190,
+                        margin: const EdgeInsets.only(right: 10),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              color.withValues(alpha: 0.15),
-                              color.withValues(alpha: 0.05),
+                              color.withValues(alpha: 0.12),
+                              color.withValues(alpha: 0.04),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusLarge),
                           border: Border.all(
-                            color: color.withValues(alpha: 0.2),
+                            color: color.withValues(alpha: 0.15),
                           ),
                         ),
                         child: Column(
@@ -555,9 +516,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Text(
                               s.name,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 14,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
                               maxLines: 1,
@@ -565,22 +526,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             Row(
                               children: [
-                                Icon(Icons.access_time, color: color, size: 14),
+                                Icon(Icons.access_time,
+                                    color: color, size: 13),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${s.startTime} - ${s.endTime}',
-                                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                      color: color,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
                             Row(
                               children: [
-                                Icon(Icons.room_rounded, color: AppTheme.textTertiary, size: 14),
+                                Icon(Icons.room_rounded,
+                                    color: AppTheme.textTertiary, size: 13),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     s.room ?? 'TBA',
-                                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                                    style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 11),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -602,48 +570,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildWeeklyChart() {
     if (_weeklyStats.isEmpty) return const SizedBox.shrink();
 
-    final maxVal = _weeklyStats.values.fold<int>(0, (a, b) => a > b ? a : b);
+    final maxVal =
+        _weeklyStats.values.fold<int>(0, (a, b) => a > b ? a : b);
 
     return Padding(
       padding: const EdgeInsets.all(AppTheme.spacingMD),
       child: GlassCard(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Weekly Attendance',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
+            const SectionHeader(
+              title: 'Weekly Attendance',
+              subtitle: 'Check-in trend this week',
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Check-in trend this week',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
             SizedBox(
-              height: 180,
+              height: 160,
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
                   maxY: (maxVal + 2).toDouble(),
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (group) => AppTheme.cardDark,
+                      getTooltipColor: (group) => AppTheme.cardDarkElevated,
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                        final day = _weeklyStats.keys.elementAt(group.x);
+                        final day =
+                            _weeklyStats.keys.elementAt(group.x);
                         return BarTooltipItem(
                           '$day\n${rod.toY.toInt()}',
                           const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         );
@@ -665,14 +623,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
-                          if (index >= 0 && index < _weeklyStats.length) {
+                          if (index >= 0 &&
+                              index < _weeklyStats.length) {
                             return Padding(
-                              padding: const EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.only(top: 6),
                               child: Text(
                                 _weeklyStats.keys.elementAt(index),
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: AppTheme.textTertiary,
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -686,32 +645,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    horizontalInterval: (maxVal / 4).ceilToDouble().clamp(1, double.infinity),
+                    horizontalInterval:
+                        (maxVal / 4).ceilToDouble().clamp(1, double.infinity),
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
-                        color: Colors.white.withValues(alpha: 0.05),
+                        color: Colors.white.withValues(alpha: 0.04),
                         strokeWidth: 1,
                       );
                     },
                   ),
                   borderData: FlBorderData(show: false),
-                  barGroups: _weeklyStats.entries.toList().asMap().entries.map((entry) {
-                    final isToday = entry.key == _weeklyStats.length - 1;
+                  barGroups: _weeklyStats.entries
+                      .toList()
+                      .asMap()
+                      .entries
+                      .map((entry) {
+                    final isToday =
+                        entry.key == _weeklyStats.length - 1;
                     return BarChartGroupData(
                       x: entry.key,
                       barRods: [
                         BarChartRodData(
                           toY: entry.value.value.toDouble(),
-                          width: 20,
+                          width: 18,
                           borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(6),
+                            top: Radius.circular(5),
                           ),
                           gradient: isToday
                               ? AppTheme.primaryGradient
                               : LinearGradient(
                                   colors: [
-                                    AppTheme.primaryColor.withValues(alpha: 0.4),
-                                    AppTheme.primaryColor.withValues(alpha: 0.2),
+                                    AppTheme.primaryColor
+                                        .withValues(alpha: 0.35),
+                                    AppTheme.primaryColor
+                                        .withValues(alpha: 0.15),
                                   ],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
@@ -732,7 +699,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStatusDistribution() {
     if (_statusDistribution.isEmpty) return const SizedBox.shrink();
 
-    final total = _statusDistribution.values.fold<int>(0, (a, b) => a + b);
+    final total =
+        _statusDistribution.values.fold<int>(0, (a, b) => a + b);
     if (total == 0) return const SizedBox.shrink();
 
     final colors = {
@@ -745,46 +713,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
       child: GlassCard(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Status Distribution',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
+            const SectionHeader(
+              title: 'Status Distribution',
+              subtitle: "Today's attendance breakdown",
             ),
             const SizedBox(height: 4),
-            Text(
-              'Today\'s attendance breakdown',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 20),
             Row(
               children: [
                 SizedBox(
-                  width: 120,
-                  height: 120,
+                  width: 110,
+                  height: 110,
                   child: PieChart(
                     PieChartData(
                       sectionsSpace: 2,
-                      centerSpaceRadius: 30,
-                      sections: _statusDistribution.entries.map((e) {
+                      centerSpaceRadius: 28,
+                      sections:
+                          _statusDistribution.entries.map((e) {
                         final percentage = (e.value / total * 100);
                         return PieChartSectionData(
                           value: e.value.toDouble(),
                           color: colors[e.key] ?? AppTheme.textTertiary,
-                          radius: 25,
-                          title: percentage > 10 ? '${percentage.toStringAsFixed(0)}%' : '',
+                          radius: 22,
+                          title: percentage > 10
+                              ? '${percentage.toStringAsFixed(0)}%'
+                              : '',
                           titleStyle: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w700,
                           ),
                         );
@@ -792,28 +751,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 18),
                 Expanded(
                   child: Column(
                     children: _statusDistribution.entries.map((e) {
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: 7),
                         child: Row(
                           children: [
                             Container(
-                              width: 10,
-                              height: 10,
+                              width: 8,
+                              height: 8,
                               decoration: BoxDecoration(
                                 color: colors[e.key],
-                                borderRadius: BorderRadius.circular(3),
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               e.key,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppTheme.textSecondary,
-                                fontSize: 13,
+                                fontSize: 12,
                               ),
                             ),
                             const Spacer(),
@@ -821,7 +780,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               '${e.value}',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 14,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -849,15 +808,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Recent Activity',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 12),
+              const SectionHeader(title: 'Recent Activity'),
               if (recentRecords.isEmpty)
                 GlassCard(
                   child: Center(
@@ -866,14 +817,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Icon(
                           Icons.history_rounded,
                           color: AppTheme.textTertiary,
-                          size: 40,
+                          size: 36,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
+                        const SizedBox(height: 6),
+                        const Text(
                           'No activity today yet',
                           style: TextStyle(
                             color: AppTheme.textSecondary,
-                            fontSize: 14,
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -883,28 +834,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
               else
                 ...recentRecords.map((record) {
                   return GlassCard(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
                         Container(
-                          width: 42,
-                          height: 42,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
+                            color: AppTheme.primaryColor
+                                .withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(11),
                           ),
                           child: Center(
                             child: Text(
                               record.userName.substring(0, 1),
                               style: TextStyle(
                                 color: AppTheme.primaryColor,
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -913,15 +865,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 record.userName,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               Text(
                                 '${record.type} • ${record.time.substring(0, 5)}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: AppTheme.textSecondary,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                 ),
                               ),
                             ],
@@ -967,7 +919,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   top: Radius.circular(24),
                 ),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: Colors.white.withValues(alpha: 0.06),
                 ),
               ),
               child: Column(
@@ -976,10 +928,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Center(
                     child: Container(
-                      width: 40,
+                      width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppTheme.textTertiary,
+                        color: AppTheme.textTertiary.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -988,12 +940,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const Text(
                     'Manual Attendance',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
                   // User selector
                   DropdownButtonFormField<String>(
@@ -1014,7 +966,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       setModalState(() => selectedUserId = value);
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
                   // Type selector
                   Row(
@@ -1023,23 +975,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       return Expanded(
                         child: GestureDetector(
                           onTap: () {
+                            HapticFeedback.selectionClick();
                             setModalState(() => selectedType = type);
                           },
                           child: Container(
                             margin: EdgeInsets.only(
-                              right: type == 'Check-in' ? 8 : 0,
-                              left: type == 'Check-out' ? 8 : 0,
+                              right: type == 'Check-in' ? 6 : 0,
+                              left: type == 'Check-out' ? 6 : 0,
                             ),
-                            padding: const EdgeInsets.all(14),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                                  ? AppTheme.primaryColor
+                                      .withValues(alpha: 0.12)
                                   : AppTheme.inputDark,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isSelected
                                     ? AppTheme.primaryColor
-                                    : Colors.transparent,
+                                    : Colors.white
+                                        .withValues(alpha: 0.04),
                               ),
                             ),
                             child: Center(
@@ -1050,6 +1005,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ? AppTheme.primaryColor
                                       : AppTheme.textSecondary,
                                   fontWeight: FontWeight.w600,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -1058,16 +1014,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   SizedBox(
                     width: double.infinity,
-                    height: 52,
+                    height: 48,
                     child: ElevatedButton(
                       onPressed: selectedUserId == null
                           ? null
                           : () async {
-                              final user = await userProvider.getUserById(selectedUserId!);
+                              final user = await userProvider
+                                  .getUserById(selectedUserId!);
                               if (user == null) return;
 
                               final now = DateTime.now();
@@ -1079,24 +1036,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 type: selectedType,
                                 status: 'Present',
                                 dateTime: now,
-                                date: DateFormat('yyyy-MM-dd').format(now),
-                                time: DateFormat('HH:mm:ss').format(now),
+                                date: DateFormat('yyyy-MM-dd')
+                                    .format(now),
+                                time: DateFormat('HH:mm:ss')
+                                    .format(now),
                                 verified: false,
                                 notes: 'Manual entry',
                                 createdAt: now,
                               );
 
-                              await attendanceProvider.recordAttendance(
+                              await attendanceProvider
+                                  .recordAttendance(
                                 record,
                                 recordedBy: auth.currentUser?.id,
                               );
 
                               if (context.mounted) {
                                 Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
                                   SnackBar(
-                                    content: Text('$selectedType recorded for ${user.name}'),
-                                    backgroundColor: AppTheme.successColor,
+                                    content: Text(
+                                        '$selectedType recorded for ${user.name}'),
+                                    backgroundColor:
+                                        AppTheme.successColor,
                                   ),
                                 );
                               }

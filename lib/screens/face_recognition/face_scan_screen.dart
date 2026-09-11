@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
@@ -50,7 +51,8 @@ class _FaceScanScreenState extends State<FaceScanScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
+    if (_cameraController == null ||
+        !_cameraController!.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
       _cameraController?.dispose();
     } else if (state == AppLifecycleState.resumed) {
@@ -95,7 +97,11 @@ class _FaceScanScreenState extends State<FaceScanScreen>
   }
 
   Future<void> _captureFace() async {
-    if (_isProcessing || _cameraController == null || !_cameraController!.value.isInitialized) return;
+    if (_isProcessing ||
+        _cameraController == null ||
+        !_cameraController!.value.isInitialized) return;
+
+    HapticFeedback.mediumImpact();
 
     setState(() {
       _isProcessing = true;
@@ -120,12 +126,14 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       // Load all users with face data
       final userProvider = context.read<UserProvider>();
       await userProvider.loadUsers();
-      final usersWithFace = userProvider.users.where((u) => u.hasFaceData).toList();
+      final usersWithFace =
+          userProvider.users.where((u) => u.hasFaceData).toList();
 
       if (usersWithFace.isEmpty) {
         setState(() {
           _isProcessing = false;
-          _statusMessage = 'No registered faces found. Please register first.';
+          _statusMessage =
+              'No registered faces found. Please register first.';
         });
         return;
       }
@@ -144,7 +152,9 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       );
 
       if (match != null) {
-        final matchedUser = usersWithFace.firstWhere((u) => u.id == match.key);
+        HapticFeedback.heavyImpact();
+        final matchedUser =
+            usersWithFace.firstWhere((u) => u.id == match.key);
         setState(() {
           _matchedUserName = matchedUser.name;
           _matchedUserId = matchedUser.id;
@@ -156,7 +166,8 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       } else {
         setState(() {
           _isProcessing = false;
-          _statusMessage = 'Face not recognized. Please try again or register.';
+          _statusMessage =
+              'Face not recognized. Please try again or register.';
         });
       }
     } catch (e) {
@@ -184,7 +195,8 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       userId: user.userId,
       userName: user.name,
       type: _selectedType,
-      status: _selectedType == 'Check-in' ? _determineStatus(now) : 'Present',
+      status:
+          _selectedType == 'Check-in' ? _determineStatus(now) : 'Present',
       dateTime: now,
       date: DateFormat('yyyy-MM-dd').format(now),
       time: DateFormat('HH:mm:ss').format(now),
@@ -200,12 +212,12 @@ class _FaceScanScreenState extends State<FaceScanScreen>
     );
 
     if (success && mounted) {
+      HapticFeedback.heavyImpact();
       _showSuccessDialog(user.name, record);
     }
   }
 
   String _determineStatus(DateTime now) {
-    // Simple check: if before 8:15, Present; if before 9:00, Late
     final hour = now.hour;
     final minute = now.minute;
 
@@ -214,7 +226,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
     } else if (hour < 9) {
       return 'Late';
     }
-    return 'Present'; // Default
+    return 'Present';
   }
 
   void _showSuccessDialog(String userName, AttendanceModel record) {
@@ -224,21 +236,22 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       builder: (context) {
         return AlertDialog(
           backgroundColor: AppTheme.cardDark,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 70,
-                height: 70,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  color: AppTheme.successColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppTheme.successColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: const Icon(
                   Icons.check_circle_rounded,
                   color: AppTheme.successColor,
-                  size: 40,
+                  size: 36,
                 ),
               ),
               const SizedBox(height: 16),
@@ -246,72 +259,83 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                 'Attendance Recorded!',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 userName,
                 style: const TextStyle(
                   color: AppTheme.primaryColor,
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 '${record.type} • ${record.status}',
                 style: const TextStyle(
                   color: AppTheme.textSecondary,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                DateFormat('dd MMM yyyy • hh:mm a').format(record.dateTime),
-                style: const TextStyle(
-                  color: AppTheme.textTertiary,
                   fontSize: 13,
                 ),
               ),
-              if (_confidenceScore != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Confidence: ${(_confidenceScore! * 100).toStringAsFixed(1)}%',
-                    style: const TextStyle(
-                      color: AppTheme.accentColor,
-                      fontSize: 12,
-                    ),
+              Text(
+                DateFormat('dd MMM yyyy • hh:mm a')
+                    .format(record.dateTime),
+                style: const TextStyle(
+                  color: AppTheme.textTertiary,
+                  fontSize: 12,
+                ),
+              ),
+              if (_confidenceScore != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Confidence: ${(_confidenceScore! * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    color: AppTheme.accentColor,
+                    fontSize: 11,
                   ),
                 ),
+              ],
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
-                        Navigator.pop(context); // Dialog
+                        Navigator.pop(context);
                         _resetScan();
                       },
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppTheme.primaryColor),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(
+                            color: AppTheme.primaryColor, width: 0.5),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 11),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: const Text('Scan Again'),
+                      child: const Text('Scan Again',
+                          style: TextStyle(fontSize: 13)),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context); // Dialog
-                        Navigator.pop(context); // Screen
+                        Navigator.pop(context);
+                        Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 11),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: const Text('Done'),
+                      child: const Text('Done',
+                          style: TextStyle(fontSize: 13)),
                     ),
                   ),
                 ],
@@ -341,14 +365,12 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       body: SafeArea(
         child: Stack(
           children: [
-            // Camera preview or placeholder
-            Positioned.fill(
-              child: _buildCameraView(),
-            ),
+            // Camera preview
+            Positioned.fill(child: _buildCameraView()),
 
             // Overlay
             Positioned.fill(
-              child: _buildOverlay(),
+              child: RepaintBoundary(child: _buildOverlay()),
             ),
 
             // Top bar
@@ -381,17 +403,18 @@ class _FaceScanScreenState extends State<FaceScanScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.videocam_off_rounded,
-                  color: AppTheme.textTertiary, size: 64),
-              const SizedBox(height: 16),
+                  color: AppTheme.textTertiary, size: 56),
+              const SizedBox(height: 14),
               Text(
                 _statusMessage,
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 14),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _initCamera,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Retry'),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Retry', style: TextStyle(fontSize: 13)),
               ),
             ],
           ),
@@ -406,11 +429,13 @@ class _FaceScanScreenState extends State<FaceScanScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: AppTheme.primaryColor),
-              SizedBox(height: 16),
+              CircularProgressIndicator(
+                  color: AppTheme.primaryColor, strokeWidth: 2.5),
+              SizedBox(height: 14),
               Text(
                 'Initializing camera...',
-                style: TextStyle(color: AppTheme.textSecondary),
+                style: TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 13),
               ),
             ],
           ),
@@ -438,7 +463,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.7),
+            Colors.black.withValues(alpha: 0.6),
             Colors.transparent,
           ],
         ),
@@ -446,7 +471,10 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.pop(context);
+            },
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -454,15 +482,15 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 20),
+                  color: Colors.white, size: 18),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Face Scan',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
@@ -470,7 +498,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
           ),
           // Type toggle
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(10),
@@ -479,9 +507,13 @@ class _FaceScanScreenState extends State<FaceScanScreen>
               children: ['Check-in', 'Check-out'].map((type) {
                 final isSelected = _selectedType == type;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedType = type),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _selectedType = type);
+                  },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 11, vertical: 5),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppTheme.primaryColor
@@ -491,8 +523,10 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                     child: Text(
                       type == 'Check-in' ? 'In' : 'Out',
                       style: TextStyle(
-                        color: isSelected ? Colors.white : AppTheme.textSecondary,
-                        fontSize: 13,
+                        color: isSelected
+                            ? Colors.white
+                            : AppTheme.textSecondary,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -508,13 +542,13 @@ class _FaceScanScreenState extends State<FaceScanScreen>
 
   Widget _buildBottomControls() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.8),
+            Colors.black.withValues(alpha: 0.75),
             Colors.transparent,
           ],
         ),
@@ -524,57 +558,64 @@ class _FaceScanScreenState extends State<FaceScanScreen>
         children: [
           // Status message
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             decoration: BoxDecoration(
               color: _scanComplete
-                  ? AppTheme.successColor.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.4),
+                  ? AppTheme.successColor.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(20),
               border: _scanComplete
-                  ? Border.all(color: AppTheme.successColor.withValues(alpha: 0.3))
+                  ? Border.all(
+                      color: AppTheme.successColor
+                          .withValues(alpha: 0.2))
                   : null,
             ),
             child: Text(
               _statusMessage,
               style: TextStyle(
-                color: _scanComplete ? AppTheme.successColor : Colors.white,
-                fontSize: 14,
+                color: _scanComplete
+                    ? AppTheme.successColor
+                    : Colors.white,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 22),
 
           if (_scanComplete && _matchedUserName != null) ...[
-            // Match result
+            // Match result card
             GlassCard(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               gradient: const LinearGradient(
                 colors: [Color(0xFF1A2A1A), Color(0xFF142014)],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 46,
+                    height: 46,
                     decoration: BoxDecoration(
-                      color: AppTheme.successColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(14),
+                      color: AppTheme.successColor
+                          .withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(13),
                     ),
                     child: const Icon(Icons.face_rounded,
-                        color: AppTheme.successColor, size: 28),
+                        color: AppTheme.successColor, size: 24),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         Text(
                           _matchedUserName!,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -582,7 +623,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                           '${(_confidenceScore! * 100).toStringAsFixed(1)}% match',
                           style: const TextStyle(
                             color: AppTheme.successColor,
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
                         ),
                       ],
@@ -591,37 +632,43 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _resetScan,
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white38),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(
+                          color: Colors.white38, width: 0.5),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(13),
                       ),
                     ),
                     child: const Text('Retry',
-                        style: TextStyle(color: Colors.white)),
+                        style: TextStyle(
+                            color: Colors.white, fontSize: 13)),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   flex: 2,
                   child: ElevatedButton(
                     onPressed: _recordAttendance,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.successColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(13),
                       ),
                     ),
                     child: Text('Confirm $_selectedType',
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13)),
                   ),
                 ),
               ],
@@ -631,34 +678,35 @@ class _FaceScanScreenState extends State<FaceScanScreen>
             GestureDetector(
               onTap: _isProcessing ? null : _captureFace,
               child: Container(
-                width: 76,
-                height: 76,
+                width: 70,
+                height: 70,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3),
                 ),
                 child: Center(
                   child: Container(
-                    width: 62,
-                    height: 62,
+                    width: 58,
+                    height: 58,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _isProcessing
-                          ? Colors.grey
+                          ? Colors.grey.shade700
                           : AppTheme.primaryColor,
                     ),
                     child: _isProcessing
                         ? const Padding(
-                            padding: EdgeInsets.all(18),
+                            padding: EdgeInsets.all(16),
                             child: CircularProgressIndicator(
                               color: Colors.white,
-                              strokeWidth: 3,
+                              strokeWidth: 2.5,
                             ),
                           )
                         : const Icon(
-                            Icons.face_retouching_natural_rounded,
+                            Icons
+                                .face_retouching_natural_rounded,
                             color: Colors.white,
-                            size: 28,
+                            size: 26,
                           ),
                   ),
                 ),
@@ -687,8 +735,10 @@ class FaceOverlayPainter extends CustomPainter {
     final ovalHeight = ovalWidth * 1.35;
 
     // Draw dim background
-    final bgPaint = Paint()..color = Colors.black.withValues(alpha: 0.4);
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+    final bgPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.4);
+    canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
     // Clear oval area
     final ovalRect = Rect.fromCenter(
@@ -698,50 +748,58 @@ class FaceOverlayPainter extends CustomPainter {
     );
 
     final clearPaint = Paint()..blendMode = BlendMode.clear;
-    canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint());
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+    canvas.saveLayer(
+        Rect.fromLTWH(0, 0, size.width, size.height), Paint());
+    canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
     canvas.drawOval(ovalRect, clearPaint);
     canvas.restore();
 
     // Draw oval border
+    final borderColor = isMatched
+        ? const Color(0xFF00D4AA)
+        : isProcessing
+            ? const Color(0xFFFFB946)
+            : const Color(0xFF7C6BFF);
+
     final borderPaint = Paint()
-      ..color = isMatched
-          ? const Color(0xFF00D4AA)
-          : isProcessing
-              ? const Color(0xFFFFB946)
-              : const Color(0xFF6C63FF)
+      ..color = borderColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+      ..strokeWidth = 2.5;
     canvas.drawOval(ovalRect, borderPaint);
 
     // Draw corner guides
     final guidePaint = Paint()
-      ..color = borderPaint.color
+      ..color = borderColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
+      ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round;
 
-    final guideLength = 30.0;
+    final guideLength = 28.0;
     final corners = [
-      // Top-left
       [
-        Offset(center.dx - ovalWidth / 2 + 10, center.dy - ovalHeight / 2 + guideLength),
-        Offset(center.dx - ovalWidth / 2 + 10, center.dy - ovalHeight / 2 + 10),
+        Offset(center.dx - ovalWidth / 2 + 10,
+            center.dy - ovalHeight / 2 + guideLength),
+        Offset(center.dx - ovalWidth / 2 + 10,
+            center.dy - ovalHeight / 2 + 10),
       ],
-      // Top-right
       [
-        Offset(center.dx + ovalWidth / 2 - 10, center.dy - ovalHeight / 2 + guideLength),
-        Offset(center.dx + ovalWidth / 2 - 10, center.dy - ovalHeight / 2 + 10),
+        Offset(center.dx + ovalWidth / 2 - 10,
+            center.dy - ovalHeight / 2 + guideLength),
+        Offset(center.dx + ovalWidth / 2 - 10,
+            center.dy - ovalHeight / 2 + 10),
       ],
-      // Bottom-left
       [
-        Offset(center.dx - ovalWidth / 2 + 10, center.dy + ovalHeight / 2 - guideLength),
-        Offset(center.dx - ovalWidth / 2 + 10, center.dy + ovalHeight / 2 - 10),
+        Offset(center.dx - ovalWidth / 2 + 10,
+            center.dy + ovalHeight / 2 - guideLength),
+        Offset(center.dx - ovalWidth / 2 + 10,
+            center.dy + ovalHeight / 2 - 10),
       ],
-      // Bottom-right
       [
-        Offset(center.dx + ovalWidth / 2 - 10, center.dy + ovalHeight / 2 - guideLength),
-        Offset(center.dx + ovalWidth / 2 - 10, center.dy + ovalHeight / 2 - 10),
+        Offset(center.dx + ovalWidth / 2 - 10,
+            center.dy + ovalHeight / 2 - guideLength),
+        Offset(center.dx + ovalWidth / 2 - 10,
+            center.dy + ovalHeight / 2 - 10),
       ],
     ];
 

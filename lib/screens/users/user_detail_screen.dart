@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
@@ -9,6 +10,7 @@ import '../../providers/attendance_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/section_header.dart';
 import '../face_recognition/face_register_screen.dart';
 
 class UserDetailScreen extends StatefulWidget {
@@ -54,6 +56,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
         decoration: const BoxDecoration(gradient: AppTheme.darkGradient),
         child: SafeArea(
           child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(child: _buildAppBar()),
               SliverToBoxAdapter(child: _buildProfileCard()),
@@ -76,23 +79,27 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.pop(context);
+            },
             child: Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: AppTheme.cardDark,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                color: AppTheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.06)),
               ),
               child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 18),
+                  color: Colors.white, size: 16),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           const Text(
             'User Profile',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
@@ -100,13 +107,28 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
           const Spacer(),
           Consumer<AuthProvider>(
             builder: (context, auth, _) {
-              if (!auth.hasPermission('manage_users')) return const SizedBox.shrink();
+              if (!auth.hasPermission('manage_users')) {
+                return const SizedBox.shrink();
+              }
               return PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+                icon: const Icon(Icons.more_vert_rounded,
+                    color: Colors.white, size: 20),
                 color: AppTheme.cardDark,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit User', style: TextStyle(color: Colors.white))),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete User', style: TextStyle(color: AppTheme.errorColor))),
+                  const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit User',
+                          style: TextStyle(
+                              color: Colors.white, fontSize: 14))),
+                  const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete User',
+                          style: TextStyle(
+                              color: AppTheme.errorColor,
+                              fontSize: 14))),
                 ],
                 onSelected: (value) {
                   if (value == 'delete') _confirmDelete();
@@ -131,50 +153,44 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
       child: GlassCard(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(22),
         child: Column(
           children: [
+            // Avatar
             Container(
-              width: 80,
-              height: 80,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [color, color.withValues(alpha: 0.6)],
                 ),
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Center(
                 child: Text(
                   _user.name.substring(0, 1).toUpperCase(),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 36,
+                    fontSize: 32,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
               _user.name,
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               _user.userId,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 color: AppTheme.textSecondary,
               ),
             ),
@@ -183,44 +199,50 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
+                    color: color.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     _user.role.toUpperCase(),
                     style: TextStyle(
                       color: color,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                if (_user.hasFaceData)
+                if (_user.hasFaceData) ...[
+                  const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppTheme.successColor.withValues(alpha: 0.12),
+                      color: AppTheme.successColor
+                          .withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.face_rounded, color: AppTheme.successColor, size: 14),
+                        Icon(Icons.face_rounded,
+                            color: AppTheme.successColor,
+                            size: 13),
                         const SizedBox(width: 4),
-                        Text(
+                        const Text(
                           'Face Registered',
                           style: TextStyle(
                             color: AppTheme.successColor,
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
+                ],
               ],
             ),
           ],
@@ -233,37 +255,37 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     return Padding(
       padding: const EdgeInsets.all(AppTheme.spacingMD),
       child: GlassCard(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.face_retouching_natural_rounded,
-                    color: AppTheme.primaryColor, size: 22),
-                const SizedBox(width: 10),
+                    color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
                 const Text(
                   'Face Profile',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             if (_user.hasFaceData)
               Row(
                 children: [
                   Icon(Icons.check_circle_rounded,
-                      color: AppTheme.successColor, size: 18),
-                  const SizedBox(width: 8),
+                      color: AppTheme.successColor, size: 16),
+                  const SizedBox(width: 6),
                   Text(
                     '${_user.faceData.length} face sample(s) registered',
                     style: const TextStyle(
                       color: AppTheme.textSecondary,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -272,38 +294,38 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
               Row(
                 children: [
                   Icon(Icons.warning_amber_rounded,
-                      color: AppTheme.warningColor, size: 18),
-                  const SizedBox(width: 8),
+                      color: AppTheme.warningColor, size: 16),
+                  const SizedBox(width: 6),
                   const Text(
                     'No face data registered',
                     style: TextStyle(
                       color: AppTheme.warningColor,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
+              height: 42,
               child: ElevatedButton.icon(
                 onPressed: () {
+                  HapticFeedback.lightImpact();
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => FaceRegisterScreen(user: _user),
+                      builder: (_) =>
+                          FaceRegisterScreen(user: _user),
                     ),
-                  ).then((_) {
-                    _refreshUser();
-                  });
+                  ).then((_) => _refreshUser());
                 },
-                icon: const Icon(Icons.camera_alt_rounded, size: 18),
-                label: Text(_user.hasFaceData
-                    ? 'Update Face Data'
-                    : 'Register Face'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                icon: const Icon(Icons.camera_alt_rounded, size: 16),
+                label: Text(
+                  _user.hasFaceData
+                      ? 'Update Face Data'
+                      : 'Register Face',
+                  style: const TextStyle(fontSize: 13),
                 ),
               ),
             ),
@@ -317,29 +339,33 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
       child: GlassCard(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Information',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             _buildInfoRow(Icons.email_outlined, 'Email', _user.email),
             _buildInfoRow(Icons.wc_outlined, 'Gender', _user.gender),
             if (_user.className != null)
-              _buildInfoRow(Icons.class_outlined, 'Class', _user.className!),
+              _buildInfoRow(
+                  Icons.class_outlined, 'Class', _user.className!),
             if (_user.department != null)
-              _buildInfoRow(Icons.business_outlined, 'Department', _user.department!),
+              _buildInfoRow(Icons.business_outlined, 'Department',
+                  _user.department!),
             if (_user.group != null)
-              _buildInfoRow(Icons.group_outlined, 'Group', _user.group!),
+              _buildInfoRow(
+                  Icons.group_outlined, 'Group', _user.group!),
             if (_user.phone != null)
-              _buildInfoRow(Icons.phone_outlined, 'Phone', _user.phone!),
+              _buildInfoRow(
+                  Icons.phone_outlined, 'Phone', _user.phone!),
             _buildInfoRow(
               Icons.calendar_today_outlined,
               'Joined',
@@ -353,16 +379,16 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.textTertiary, size: 18),
-          const SizedBox(width: 12),
+          Icon(icon, color: AppTheme.textTertiary, size: 16),
+          const SizedBox(width: 10),
           Text(
             label,
             style: const TextStyle(
               color: AppTheme.textSecondary,
-              fontSize: 13,
+              fontSize: 12,
             ),
           ),
           const Spacer(),
@@ -371,7 +397,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
               value,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
               overflow: TextOverflow.ellipsis,
@@ -383,37 +409,76 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
   }
 
   Widget _buildAttendanceStats() {
-    final total = _userAttendance.where((a) => a.type == 'Check-in').length;
+    final total =
+        _userAttendance.where((a) => a.type == 'Check-in').length;
     final present = _userAttendance
-        .where((a) => a.type == 'Check-in' && a.status == 'Present')
+        .where(
+            (a) => a.type == 'Check-in' && a.status == 'Present')
         .length;
     final late = _userAttendance
         .where((a) => a.type == 'Check-in' && a.status == 'Late')
         .length;
-    final rate = total > 0 ? ((present + late) / total * 100) : 0.0;
+    final rate =
+        total > 0 ? ((present + late) / total * 100) : 0.0;
 
     return Padding(
       padding: const EdgeInsets.all(AppTheme.spacingMD),
       child: GlassCard(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Attendance Summary',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
             const SizedBox(height: 14),
+            // Attendance rate bar
             Row(
               children: [
-                _buildMiniStat('Total', '$total', AppTheme.primaryColor),
-                _buildMiniStat('Present', '$present', AppTheme.successColor),
-                _buildMiniStat('Late', '$late', AppTheme.warningColor),
-                _buildMiniStat('Rate', '${rate.toStringAsFixed(0)}%', AppTheme.accentColor),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: rate / 100,
+                      backgroundColor:
+                          Colors.white.withValues(alpha: 0.06),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(
+                        rate >= 80
+                            ? AppTheme.successColor
+                            : rate >= 60
+                                ? AppTheme.warningColor
+                                : AppTheme.errorColor,
+                      ),
+                      minHeight: 6,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '${rate.toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                _buildMiniStat(
+                    'Total', '$total', AppTheme.primaryColor),
+                _buildMiniStat(
+                    'Present', '$present', AppTheme.successColor),
+                _buildMiniStat(
+                    'Late', '$late', AppTheme.warningColor),
               ],
             ),
           ],
@@ -430,15 +495,16 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
             value,
             style: TextStyle(
               color: color,
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
             ),
           ),
+          const SizedBox(height: 1),
           Text(
             label,
             style: const TextStyle(
               color: AppTheme.textSecondary,
-              fontSize: 11,
+              fontSize: 10,
             ),
           ),
         ],
@@ -454,15 +520,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Recent Attendance',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
+          const SectionHeader(title: 'Recent Attendance'),
           if (recentRecords.isEmpty)
             GlassCard(
               child: Center(
@@ -474,42 +532,58 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
             )
           else
             ...recentRecords.map((record) => GlassCard(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(11),
                   child: Row(
                     children: [
-                      Icon(
-                        record.type == 'Check-in'
-                            ? Icons.login_rounded
-                            : Icons.logout_rounded,
-                        color: record.type == 'Check-in'
-                            ? AppTheme.accentColor
-                            : AppTheme.primaryColor,
-                        size: 20,
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: (record.type == 'Check-in'
+                                  ? AppTheme.accentColor
+                                  : AppTheme.primaryColor)
+                              .withValues(alpha: 0.10),
+                          borderRadius:
+                              BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          record.type == 'Check-in'
+                              ? Icons.login_rounded
+                              : Icons.logout_rounded,
+                          color: record.type == 'Check-in'
+                              ? AppTheme.accentColor
+                              : AppTheme.primaryColor,
+                          size: 17,
+                        ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
                           children: [
                             Text(
                               record.type,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             Text(
                               '${record.date} • ${record.time.substring(0, 5)}',
                               style: const TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 11,
+                                color:
+                                    AppTheme.textSecondary,
+                                fontSize: 10,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      StatusBadge(status: record.status, fontSize: 11),
+                      StatusBadge(
+                          status: record.status,
+                          fontSize: 10),
                     ],
                   ),
                 )),
@@ -521,7 +595,9 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
   Widget _buildActions() {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        if (!auth.hasPermission('manage_users')) return const SizedBox.shrink();
+        if (!auth.hasPermission('manage_users')) {
+          return const SizedBox.shrink();
+        }
 
         return Padding(
           padding: const EdgeInsets.all(AppTheme.spacingMD),
@@ -529,16 +605,19 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
             children: [
               SizedBox(
                 width: double.infinity,
+                height: 44,
                 child: OutlinedButton.icon(
                   onPressed: _confirmDelete,
-                  icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor),
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: AppTheme.errorColor, size: 18),
                   label: const Text(
                     'Delete User',
-                    style: TextStyle(color: AppTheme.errorColor),
+                    style: TextStyle(
+                        color: AppTheme.errorColor, fontSize: 13),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppTheme.errorColor),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(
+                        color: AppTheme.errorColor, width: 0.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -561,10 +640,12 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: const Text('Delete User', style: TextStyle(color: Colors.white)),
+          title: const Text('Delete User',
+              style: TextStyle(color: Colors.white, fontSize: 16)),
           content: Text(
             'Are you sure you want to delete ${_user.name}? This action cannot be undone.',
-            style: const TextStyle(color: AppTheme.textSecondary),
+            style: const TextStyle(
+                color: AppTheme.textSecondary, fontSize: 14),
           ),
           actions: [
             TextButton(

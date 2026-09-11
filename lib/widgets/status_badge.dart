@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
+import '../core/theme/app_theme.dart';
 
 class StatusBadge extends StatelessWidget {
   final String status;
@@ -47,26 +47,23 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = fontSize ?? 11;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.12),
+        color: _color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(AppTheme.radiusRound),
-        border: Border.all(
-          color: _color.withValues(alpha: 0.3),
-          width: 0.5,
-        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_icon, color: _color, size: fontSize != null ? fontSize! + 2 : 14),
+          Icon(_icon, color: _color, size: size + 3),
           const SizedBox(width: 4),
           Text(
             status,
             style: TextStyle(
               color: _color,
-              fontSize: fontSize ?? 12,
+              fontSize: size,
               fontWeight: FontWeight.w600,
             ),
           ),

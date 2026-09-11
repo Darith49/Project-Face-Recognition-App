@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/attendance_provider.dart';
-
 import '../../models/attendance_model.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/section_header.dart';
+import '../../widgets/empty_state.dart';
 import '../face_recognition/face_scan_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
@@ -22,7 +23,6 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   late TabController _tabController;
   DateTime _selectedDate = DateTime.now();
   String? _selectedStatus;
-
 
   @override
   void initState() {
@@ -68,15 +68,17 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
+          HapticFeedback.lightImpact();
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const FaceScanScreen()),
           ).then((_) => _loadData());
         },
         backgroundColor: AppTheme.primaryColor,
-        icon: const Icon(Icons.face_retouching_natural_rounded),
+        elevation: 2,
+        icon: const Icon(Icons.face_retouching_natural_rounded, size: 20),
         label: const Text('Face Scan',
-            style: TextStyle(fontWeight: FontWeight.w600)),
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
       ),
     );
   }
@@ -87,18 +89,18 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+              color: AppTheme.primaryColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
             ),
             child: const Icon(
               Icons.fact_check_rounded,
               color: AppTheme.primaryColor,
-              size: 24,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,15 +108,15 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                 Text(
                   'Attendance',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
                 Text(
-                  'Track and manage attendance records',
+                  'Track and manage records',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: AppTheme.textSecondary,
                   ),
                 ),
@@ -130,7 +132,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMD),
       decoration: BoxDecoration(
-        color: AppTheme.cardDark,
+        color: AppTheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: TabBar(
@@ -142,7 +144,8 @@ class _AttendanceScreenState extends State<AttendanceScreen>
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: Colors.white,
         unselectedLabelColor: AppTheme.textTertiary,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        labelStyle:
+            const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         dividerHeight: 0,
         tabs: const [
           Tab(text: 'Today'),
@@ -156,13 +159,15 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     return Consumer<AttendanceProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor));
+          return const Center(
+              child: CircularProgressIndicator(
+                  color: AppTheme.primaryColor, strokeWidth: 2.5));
         }
 
         final records = provider.todayRecords;
 
         if (records.isEmpty) {
-          return _buildEmptyState(
+          return const EmptyState(
             icon: Icons.fact_check_outlined,
             title: 'No attendance records today',
             subtitle: 'Start by scanning a face to record attendance',
@@ -173,14 +178,12 @@ class _AttendanceScreenState extends State<AttendanceScreen>
           onRefresh: _loadData,
           color: AppTheme.primaryColor,
           child: ListView.builder(
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
             padding: const EdgeInsets.all(AppTheme.spacingMD),
             itemCount: records.length,
             itemBuilder: (context, index) {
-              return FadeInUp(
-                duration: const Duration(milliseconds: 400),
-                delay: Duration(milliseconds: index * 50),
-                child: _buildAttendanceCard(records[index]),
-              );
+              return _buildAttendanceCard(records[index]);
             },
           ),
         );
@@ -226,24 +229,25 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppTheme.inputDark,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: Colors.white.withValues(alpha: 0.04),
                         ),
                       ),
                       child: Row(
                         children: [
                           const Icon(Icons.calendar_today_rounded,
-                              color: AppTheme.primaryColor, size: 20),
-                          const SizedBox(width: 12),
+                              color: AppTheme.primaryColor, size: 18),
+                          const SizedBox(width: 10),
                           Text(
-                            DateFormat('dd MMMM yyyy').format(_selectedDate),
+                            DateFormat('dd MMMM yyyy')
+                                .format(_selectedDate),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -254,25 +258,30 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   // Status filter chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _buildFilterChip('All', _selectedStatus == null, () {
+                        _buildFilterChip(
+                            'All', _selectedStatus == null, () {
                           setState(() => _selectedStatus = null);
                         }),
-                        _buildFilterChip('Present', _selectedStatus == 'Present', () {
+                        _buildFilterChip(
+                            'Present', _selectedStatus == 'Present', () {
                           setState(() => _selectedStatus = 'Present');
                         }),
-                        _buildFilterChip('Late', _selectedStatus == 'Late', () {
+                        _buildFilterChip(
+                            'Late', _selectedStatus == 'Late', () {
                           setState(() => _selectedStatus = 'Late');
                         }),
-                        _buildFilterChip('Absent', _selectedStatus == 'Absent', () {
+                        _buildFilterChip(
+                            'Absent', _selectedStatus == 'Absent', () {
                           setState(() => _selectedStatus = 'Absent');
                         }),
-                        _buildFilterChip('Leave', _selectedStatus == 'Leave', () {
+                        _buildFilterChip(
+                            'Leave', _selectedStatus == 'Leave', () {
                           setState(() => _selectedStatus = 'Leave');
                         }),
                       ],
@@ -294,7 +303,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                   }
 
                   if (records.isEmpty) {
-                    return _buildEmptyState(
+                    return const EmptyState(
                       icon: Icons.search_off_rounded,
                       title: 'No records found',
                       subtitle: 'Try changing the date or filters',
@@ -302,6 +311,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                   }
 
                   return ListView.builder(
+                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppTheme.spacingMD),
                     itemCount: records.length,
@@ -318,28 +328,35 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     );
   }
 
-  Widget _buildFilterChip(String label, bool selected, VoidCallback onTap) {
+  Widget _buildFilterChip(
+      String label, bool selected, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Container(
         margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: selected
-              ? AppTheme.primaryColor.withValues(alpha: 0.15)
-              : AppTheme.inputDark,
+              ? AppTheme.primaryColor.withValues(alpha: 0.12)
+              : AppTheme.surfaceContainer,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected
-                ? AppTheme.primaryColor
-                : Colors.white.withValues(alpha: 0.05),
+                ? AppTheme.primaryColor.withValues(alpha: 0.4)
+                : Colors.white.withValues(alpha: 0.04),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? AppTheme.primaryColor : AppTheme.textSecondary,
-            fontSize: 13,
+            color: selected
+                ? AppTheme.primaryColor
+                : AppTheme.textSecondary,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -349,31 +366,27 @@ class _AttendanceScreenState extends State<AttendanceScreen>
 
   Widget _buildAttendanceCard(AttendanceModel record) {
     return GlassCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               gradient: record.type == 'Check-in'
-                  ? const LinearGradient(
-                      colors: [Color(0xFF00D4AA), Color(0xFF00B894)],
-                    )
-                  : const LinearGradient(
-                      colors: [Color(0xFF6C63FF), Color(0xFF4DABF7)],
-                    ),
-              borderRadius: BorderRadius.circular(13),
+                  ? AppTheme.accentGradient
+                  : AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               record.type == 'Check-in'
                   ? Icons.login_rounded
                   : Icons.logout_rounded,
               color: Colors.white,
-              size: 22,
+              size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,7 +395,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                   record.userName,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -392,22 +405,22 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                     Icon(
                       Icons.access_time_rounded,
                       color: AppTheme.textTertiary,
-                      size: 13,
+                      size: 12,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Text(
                       '${record.type} • ${record.time.substring(0, 5)}',
                       style: const TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                     if (record.verified) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Icon(
                         Icons.verified_rounded,
                         color: AppTheme.successColor,
-                        size: 14,
+                        size: 13,
                       ),
                     ],
                   ],
@@ -420,55 +433,16 @@ class _AttendanceScreenState extends State<AttendanceScreen>
             children: [
               StatusBadge(status: record.status),
               if (record.confidenceScore != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   '${(record.confidenceScore! * 100).toStringAsFixed(0)}% match',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppTheme.textTertiary,
-                    fontSize: 10,
+                    fontSize: 9,
                   ),
                 ),
               ],
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.cardDark,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(icon, color: AppTheme.textTertiary, size: 48),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 13,
-            ),
           ),
         ],
       ),
