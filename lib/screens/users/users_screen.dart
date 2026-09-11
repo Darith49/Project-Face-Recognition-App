@@ -453,7 +453,7 @@ class _UsersScreenState extends State<UsersScreen>
                           const SizedBox(height: 12),
                           // Role dropdown
                           DropdownButtonFormField<String>(
-                            value: selectedRole,
+                            initialValue: selectedRole,
                             decoration: const InputDecoration(
                               labelText: 'Role',
                               prefixIcon:
@@ -482,7 +482,7 @@ class _UsersScreenState extends State<UsersScreen>
                           const SizedBox(height: 12),
                           // Gender dropdown
                           DropdownButtonFormField<String>(
-                            value: selectedGender,
+                            initialValue: selectedGender,
                             decoration: const InputDecoration(
                               labelText: 'Gender',
                               prefixIcon:

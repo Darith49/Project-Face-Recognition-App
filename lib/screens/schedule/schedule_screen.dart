@@ -526,7 +526,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
-                            value: selectedDay,
+                            initialValue: selectedDay,
                             decoration: const InputDecoration(
                               labelText: 'Day of Week',
                               prefixIcon: Icon(

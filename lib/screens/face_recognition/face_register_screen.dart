@@ -23,7 +23,7 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen> {
   bool _isCapturing = false;
   bool _isCameraError = false;
   final List<String> _capturedFaceData = [];
-  int _maxCaptures = 3;
+  final int _maxCaptures = 3;
   final FaceRecognitionService _faceService = FaceRecognitionService();
 
   @override
@@ -69,7 +69,9 @@ class _FaceRegisterScreenState extends State<FaceRegisterScreen> {
   Future<void> _captureAndProcess() async {
     if (_isCapturing ||
         _cameraController == null ||
-        !_cameraController!.value.isInitialized) return;
+        !_cameraController!.value.isInitialized) {
+      return;
+    }
 
     setState(() => _isCapturing = true);
 

@@ -52,7 +52,9 @@ class _FaceScanScreenState extends State<FaceScanScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_cameraController == null ||
-        !_cameraController!.value.isInitialized) return;
+        !_cameraController!.value.isInitialized) {
+      return;
+    }
     if (state == AppLifecycleState.inactive) {
       _cameraController?.dispose();
     } else if (state == AppLifecycleState.resumed) {
@@ -99,7 +101,9 @@ class _FaceScanScreenState extends State<FaceScanScreen>
   Future<void> _captureFace() async {
     if (_isProcessing ||
         _cameraController == null ||
-        !_cameraController!.value.isInitialized) return;
+        !_cameraController!.value.isInitialized) {
+      return;
+    }
 
     HapticFeedback.mediumImpact();
 
@@ -122,6 +126,8 @@ class _FaceScanScreenState extends State<FaceScanScreen>
         });
         return;
       }
+
+      if (!mounted) return;
 
       // Load all users with face data
       final userProvider = context.read<UserProvider>();

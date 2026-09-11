@@ -7,7 +7,6 @@ import '../../providers/attendance_provider.dart';
 import '../../models/attendance_model.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/status_badge.dart';
-import '../../widgets/section_header.dart';
 import '../../widgets/empty_state.dart';
 import '../face_recognition/face_scan_screen.dart';
 

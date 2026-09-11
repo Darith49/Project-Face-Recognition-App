@@ -12,7 +12,6 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/section_header.dart';
-import '../../widgets/empty_state.dart';
 import '../auth/login_screen.dart';
 import '../face_recognition/face_scan_screen.dart';
 import '../../models/attendance_model.dart';
