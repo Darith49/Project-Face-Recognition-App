@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_theme.dart';
+import '../app_theme.dart';
 
 /// A reusable section header with title and optional trailing action.
 class SectionHeader extends StatelessWidget {

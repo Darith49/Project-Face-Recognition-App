@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_theme.dart';
+import '../app_theme.dart';
 
 /// A shared empty state widget with icon, title, subtitle, and optional action.
 class EmptyState extends StatelessWidget {

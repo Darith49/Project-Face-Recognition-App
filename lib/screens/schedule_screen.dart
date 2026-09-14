@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import '../../core/theme/app_theme.dart';
-import '../../providers/schedule_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../models/schedule_model.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/empty_state.dart';
+import '../app_theme.dart';
+import '../providers/schedule_provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/schedule_model.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/empty_state.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});

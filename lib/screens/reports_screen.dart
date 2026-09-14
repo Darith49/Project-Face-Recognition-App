@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../../providers/attendance_provider.dart';
-import '../../providers/user_provider.dart';
-import '../../services/database_service.dart';
-import '../../models/activity_log_model.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/section_header.dart';
-import '../../widgets/empty_state.dart';
+import '../app_theme.dart';
+import '../providers/attendance_provider.dart';
+import '../providers/user_provider.dart';
+import '../services/database_service.dart';
+import '../models/activity_log_model.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/section_header.dart';
+import '../widgets/empty_state.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -245,7 +245,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                       Text(
                         '${_overallRate.toStringAsFixed(0)}%',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                         ),
@@ -264,7 +264,7 @@ class _ReportsScreenState extends State<ReportsScreen>
               return Column(
                 children: [
                   _buildSummaryRow('Check-ins', '${attendance.todayCheckIns}',
-                      Icons.login_rounded, AppTheme.accentColor),
+                    Icons.login_rounded, AppTheme.accentColor),
                   _buildSummaryRow('Check-outs',
                       '${attendance.todayCheckOuts}',
                       Icons.logout_rounded, AppTheme.primaryColor),
@@ -477,7 +477,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                         child: Text(
                           'No data available',
                           style: TextStyle(
-                              color: AppTheme.textSecondary),
+                            color: AppTheme.textSecondary),
                         ),
                       ),
               ),

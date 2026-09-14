@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'core/theme/app_theme.dart';
+import 'app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/attendance_provider.dart';
 import 'providers/schedule_provider.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/main/main_shell.dart';
+import 'screens/login_screen.dart';
+import 'screens/main_shell.dart';
 import 'services/database_service.dart';
 
 void main() async {
@@ -49,11 +48,7 @@ class FaceAttendApp extends StatelessWidget {
       child: MaterialApp(
         title: 'FaceAttend',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme.copyWith(
-          textTheme: GoogleFonts.interTextTheme(
-            AppTheme.darkTheme.textTheme,
-          ),
-        ),
+        theme: AppTheme.darkTheme,
         home: const SplashScreen(),
       ),
     );

@@ -16,26 +16,38 @@ class FaceRecognitionService {
       final image = img.decodeImage(imageBytes);
       if (image == null) return [];
 
-      // Resize to a standard size for consistent embeddings
-      final resized = img.copyResize(image, width: 64, height: 64);
+      // Center crop to focus on the face (assume face is in center 50%)
+      final minDim = min(image.width, image.height);
+      final cropSize = (minDim * 0.5).toInt();
+      final offsetX = (image.width - cropSize) ~/ 2;
+      final offsetY = (image.height - cropSize) ~/ 2;
+      
+      final cropped = img.copyCrop(
+        image, 
+        x: offsetX, 
+        y: offsetY, 
+        width: cropSize, 
+        height: cropSize
+      );
 
-      // Generate a 128-dimensional embedding by sampling pixel values
+      // Resize to a 32x32 standard size for better granularity than 128 points
+      final resized = img.copyResize(cropped, width: 32, height: 32);
+
+      // Generate a 1024-dimensional embedding (32x32)
       final embedding = <double>[];
-      final step = (64 * 64) ~/ 128;
 
-      for (int i = 0; i < 128; i++) {
-        final pixelIndex = (i * step) % (64 * 64);
-        final x = pixelIndex % 64;
-        final y = pixelIndex ~/ 64;
-        final pixel = resized.getPixel(x, y);
+      for (int y = 0; y < 32; y++) {
+        for (int x = 0; x < 32; x++) {
+          final pixel = resized.getPixel(x, y);
 
-        // Normalize pixel values to 0-1 range
-        final r = pixel.r / 255.0;
-        final g = pixel.g / 255.0;
-        final b = pixel.b / 255.0;
+          // Normalize pixel values to 0-1 range
+          final r = pixel.r / 255.0;
+          final g = pixel.g / 255.0;
+          final b = pixel.b / 255.0;
 
-        // Create a combined value
-        embedding.add((r * 0.3 + g * 0.59 + b * 0.11));
+          // Convert to grayscale representation
+          embedding.add((r * 0.3 + g * 0.59 + b * 0.11));
+        }
       }
 
       // Normalize the embedding vector

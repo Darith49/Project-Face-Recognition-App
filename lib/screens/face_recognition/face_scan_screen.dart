@@ -5,14 +5,15 @@ import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_constants.dart';
+import '../../app_theme.dart';
+import '../../app_constants.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/attendance_model.dart';
 import '../../services/face_recognition_service.dart';
 import '../../widgets/glass_card.dart';
+import 'package:geolocator/geolocator.dart';
 
 class FaceScanScreen extends StatefulWidget {
   const FaceScanScreen({super.key});
@@ -187,12 +188,68 @@ class _FaceScanScreenState extends State<FaceScanScreen>
   Future<void> _recordAttendance() async {
     if (_matchedUserId == null) return;
 
+    setState(() {
+      _isProcessing = true;
+      _statusMessage = 'Verifying location...';
+    });
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showLocationError('Location services are disabled.');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showLocationError('Location permissions are denied.');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _showLocationError('Location permissions are permanently denied.');
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      double distanceInMeters = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        AppConstants.schoolLatitude,
+        AppConstants.schoolLongitude,
+      );
+
+      if (distanceInMeters > AppConstants.gpsRadiusMeters) {
+        _showLocationError('You are outside the designated area (${distanceInMeters.toInt()}m away).');
+        return;
+      }
+    } catch (e) {
+      _showLocationError('Failed to get location: $e');
+      return;
+    }
+
+    if (!mounted) {
+      setState(() => _isProcessing = false);
+      return;
+    }
+
     final userProvider = context.read<UserProvider>();
     final attendanceProvider = context.read<AttendanceProvider>();
     final auth = context.read<AuthProvider>();
 
     final user = await userProvider.getUserById(_matchedUserId!);
-    if (user == null) return;
+    if (user == null) {
+      setState(() => _isProcessing = false);
+      return;
+    }
 
     final now = DateTime.now();
     final record = AttendanceModel(
@@ -220,7 +277,24 @@ class _FaceScanScreenState extends State<FaceScanScreen>
     if (success && mounted) {
       HapticFeedback.heavyImpact();
       _showSuccessDialog(user.name, record);
+    } else {
+      setState(() => _isProcessing = false);
     }
+  }
+
+  void _showLocationError(String message) {
+    if (!mounted) return;
+    setState(() {
+      _isProcessing = false;
+      _statusMessage = message;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppTheme.errorColor,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   String _determineStatus(DateTime now) {
@@ -662,7 +736,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                 Expanded(
                   flex: 2,
                   child: ElevatedButton(
-                    onPressed: _recordAttendance,
+                    onPressed: _isProcessing ? null : _recordAttendance,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.successColor,
                       padding: const EdgeInsets.symmetric(
@@ -671,10 +745,19 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                         borderRadius: BorderRadius.circular(13),
                       ),
                     ),
-                    child: Text('Confirm $_selectedType',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13)),
+                    child: _isProcessing
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text('Confirm $_selectedType',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13)),
                   ),
                 ),
               ],

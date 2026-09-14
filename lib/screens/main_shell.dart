@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
-import '../../providers/auth_provider.dart';
-import '../dashboard/dashboard_screen.dart';
-import '../attendance/attendance_screen.dart';
-import '../users/users_screen.dart';
-import '../schedule/schedule_screen.dart';
-import '../reports/reports_screen.dart';
+import '../app_theme.dart';
+import '../providers/auth_provider.dart';
+import 'dashboard_screen.dart';
+import 'attendance_screen.dart';
+import 'users/users_screen.dart';
+import 'schedule_screen.dart';
+import 'reports_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});

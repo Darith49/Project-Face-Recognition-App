@@ -84,46 +84,4 @@ class ScheduleModel {
       updatedAt: DateTime.parse(map['updatedAt']),
     );
   }
-
-  ScheduleModel copyWith({
-    String? id,
-    String? name,
-    String? subject,
-    String? className,
-    String? department,
-    String? room,
-    String? teacherId,
-    String? teacherName,
-    String? dayOfWeek,
-    String? startTime,
-    String? endTime,
-    double? latitude,
-    double? longitude,
-    double? radiusMeters,
-    String? locationName,
-    bool? isActive,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return ScheduleModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      subject: subject ?? this.subject,
-      className: className ?? this.className,
-      department: department ?? this.department,
-      room: room ?? this.room,
-      teacherId: teacherId ?? this.teacherId,
-      teacherName: teacherName ?? this.teacherName,
-      dayOfWeek: dayOfWeek ?? this.dayOfWeek,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      radiusMeters: radiusMeters ?? this.radiusMeters,
-      locationName: locationName ?? this.locationName,
-      isActive: isActive ?? this.isActive,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
 }

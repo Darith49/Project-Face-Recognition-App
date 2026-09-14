@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
-import '../../core/theme/app_theme.dart';
+import '../../app_theme.dart';
 import '../../models/user_model.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/auth_provider.dart';

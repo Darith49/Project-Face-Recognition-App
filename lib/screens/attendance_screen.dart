@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../../providers/attendance_provider.dart';
-import '../../models/attendance_model.dart';
-import '../../widgets/glass_card.dart';
-import '../../widgets/status_badge.dart';
-import '../../widgets/empty_state.dart';
-import '../face_recognition/face_scan_screen.dart';
+import '../app_theme.dart';
+import '../providers/attendance_provider.dart';
+import '../models/attendance_model.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/status_badge.dart';
+import '../widgets/empty_state.dart';
+import 'face_recognition/face_scan_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});

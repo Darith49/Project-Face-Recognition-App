@@ -84,46 +84,4 @@ class AttendanceModel {
       createdAt: DateTime.parse(map['createdAt']),
     );
   }
-
-  AttendanceModel copyWith({
-    String? id,
-    String? odlUserId,
-    String? userId,
-    String? userName,
-    String? type,
-    String? status,
-    DateTime? dateTime,
-    String? date,
-    String? time,
-    String? scheduleId,
-    String? scheduleName,
-    double? latitude,
-    double? longitude,
-    String? locationName,
-    bool? verified,
-    double? confidenceScore,
-    String? notes,
-    DateTime? createdAt,
-  }) {
-    return AttendanceModel(
-      id: id ?? this.id,
-      odlUserId: odlUserId ?? this.odlUserId,
-      userId: userId ?? this.userId,
-      userName: userName ?? this.userName,
-      type: type ?? this.type,
-      status: status ?? this.status,
-      dateTime: dateTime ?? this.dateTime,
-      date: date ?? this.date,
-      time: time ?? this.time,
-      scheduleId: scheduleId ?? this.scheduleId,
-      scheduleName: scheduleName ?? this.scheduleName,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      locationName: locationName ?? this.locationName,
-      verified: verified ?? this.verified,
-      confidenceScore: confidenceScore ?? this.confidenceScore,
-      notes: notes ?? this.notes,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
 }

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
-import '../../providers/auth_provider.dart';
-import '../../widgets/gradient_button.dart';
-import '../main/main_shell.dart';
+import '../app_theme.dart';
+import '../providers/auth_provider.dart';
+import 'main_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -311,11 +310,23 @@ class _LoginScreenState extends State<LoginScreen>
           // Login button
           Consumer<AuthProvider>(
             builder: (context, auth, _) {
-              return GradientButton(
-                text: 'Sign In',
-                icon: Icons.login_rounded,
-                isLoading: auth.isLoading,
-                onPressed: auth.isLoading ? null : _handleLogin,
+              return SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: auth.isLoading ? null : _handleLogin,
+                  icon: auth.isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Icon(Icons.login_rounded, size: 19),
+                  label: const Text('Sign In', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
               );
             },
           ),
